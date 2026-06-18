@@ -1,0 +1,26 @@
+{
+  "name": "product-postgres-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "plugin.name": "pgoutput",
+    "publication.name": "ecommerce_cdc",
+    "slot.name": "ecommerce_cdc_slot",
+
+    "database.hostname": "postgres-product",
+    "database.port": "5432",
+    "database.user": "product",
+    "database.password": "product",
+    "database.dbname": "product_db",
+
+    "topic.prefix": "ecommerce",
+    "table.include.list": "public.products",
+
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "false",
+
+    "snapshot.mode": "initial",
+    "tombstones.on.delete": "false"
+  }
+}

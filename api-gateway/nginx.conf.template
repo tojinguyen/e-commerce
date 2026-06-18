@@ -1,0 +1,45 @@
+# =============================================================================
+# Reference NGINX gateway config.
+#
+# In Kubernetes the NGINX *Ingress* controller (deploy/k8s/ingress/10-ingress.yaml)
+# is the primary edge router. This file documents the equivalent routing for a
+# plain-Docker / bare-metal run, and is rendered with `envsubst` at container start.
+# =============================================================================
+
+upstream product_service { server ${PRODUCT_HOST}:${PRODUCT_PORT}; }
+upstream cart_service    { server ${CART_HOST}:${CART_PORT}; }
+upstream order_service   { server ${ORDER_HOST}:${ORDER_PORT}; }
+
+server {
+    listen 80;
+    server_name _;
+
+    # ---- Product Service ----
+    location /api/v1/products {
+        proxy_pass http://product_service;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # ---- Cart Service ----
+    location /api/v1/carts {
+        proxy_pass http://cart_service;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # ---- Order Service ----
+    location /api/v1/orders {
+        proxy_pass http://order_service;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /healthz { return 200 'ok'; add_header Content-Type text/plain; }
+}

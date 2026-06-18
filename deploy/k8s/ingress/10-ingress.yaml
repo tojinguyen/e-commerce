@@ -1,0 +1,36 @@
+# Routes external traffic to the services. Install the NGINX Ingress controller
+# first (see `make cluster-up`). On kind, access via http://localhost/.
+#
+# No path rewrite: services mount their routes at the full /api/v1/<resource> path,
+# so the incoming path is forwarded unchanged.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ecommerce-gateway
+  namespace: ecommerce
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /api/v1/products
+            pathType: Prefix
+            backend:
+              service:
+                name: product-service
+                port:
+                  number: 8080
+          - path: /api/v1/carts
+            pathType: Prefix
+            backend:
+              service:
+                name: cart-service
+                port:
+                  number: 8081
+          - path: /api/v1/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: order-service
+                port:
+                  number: 8082
