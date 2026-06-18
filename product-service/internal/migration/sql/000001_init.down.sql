@@ -1,0 +1,2 @@
+DROP PUBLICATION IF EXISTS ecommerce_cdc;
+DROP TABLE IF EXISTS products;

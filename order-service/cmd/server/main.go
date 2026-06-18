@@ -12,6 +12,7 @@ import (
 	"github.com/toainguyen/ecommerce/order-service/internal/config"
 	delivery "github.com/toainguyen/ecommerce/order-service/internal/delivery/http"
 	"github.com/toainguyen/ecommerce/pkg/observability"
+	"github.com/toainguyen/ecommerce/order-service/internal/migration"
 	"github.com/toainguyen/ecommerce/order-service/internal/repository"
 	"github.com/toainguyen/ecommerce/order-service/internal/usecase"
 	"go.temporal.io/sdk/client"
@@ -27,6 +28,12 @@ func main() {
 	if err != nil {
 		log.Warn("tracing init failed (continuing without traces)", "error", err)
 		shutdownTracing = func(context.Context) error { return nil }
+	}
+
+	// Run schema migrations before opening the repository.
+	if err := migration.Run(cfg.PostgresDSN, log); err != nil {
+		log.Error("fatal: migration failed", "error", err)
+		os.Exit(1)
 	}
 
 	repo, err := repository.NewPostgresRepository(cfg.PostgresDSN, log)

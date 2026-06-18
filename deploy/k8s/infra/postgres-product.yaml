@@ -1,28 +1,6 @@
 # PostgreSQL for the Product Service. Started with wal_level=logical so Debezium
-# can stream WAL changes (CDC) into Kafka -> Elasticsearch.
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: postgres-product-init
-  namespace: ecommerce
-data:
-  init.sql: |
-    CREATE TABLE IF NOT EXISTS products (
-        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        sku         TEXT        NOT NULL UNIQUE,
-        name        TEXT        NOT NULL,
-        description TEXT,
-        price_cents BIGINT      NOT NULL DEFAULT 0,
-        currency    TEXT        NOT NULL DEFAULT 'USD',
-        stock       INT         NOT NULL DEFAULT 0,
-        attributes  JSONB       NOT NULL DEFAULT '{}'::jsonb,
-        created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-        updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    ALTER TABLE products REPLICA IDENTITY FULL;
-    DROP PUBLICATION IF EXISTS ecommerce_cdc;
-    CREATE PUBLICATION ecommerce_cdc FOR TABLE products;
----
+# can stream WAL changes (CDC) into Kafka -> Elasticsearch. Schema and the CDC
+# publication are created by the product-service golang-migrate migrations at startup.
 apiVersion: v1
 kind: Service
 metadata:
@@ -75,17 +53,11 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
-            - name: init
-              mountPath: /docker-entrypoint-initdb.d
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "product"]
             initialDelaySeconds: 5
             periodSeconds: 10
-      volumes:
-        - name: init
-          configMap:
-            name: postgres-product-init
   volumeClaimTemplates:
     - metadata:
         name: data

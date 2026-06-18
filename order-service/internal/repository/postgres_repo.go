@@ -15,7 +15,8 @@ type PostgresRepository struct {
 	log *slog.Logger
 }
 
-// NewPostgresRepository opens a gorm connection, logs the result, and runs AutoMigrate.
+// NewPostgresRepository opens a gorm connection and logs the result. Schema is
+// managed by the migration package (golang-migrate), not gorm AutoMigrate.
 func NewPostgresRepository(dsn string, log *slog.Logger) (*PostgresRepository, error) {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -24,10 +25,6 @@ func NewPostgresRepository(dsn string, log *slog.Logger) (*PostgresRepository, e
 	}
 	log.Info("connected to postgres (order_db)")
 
-	if err := db.AutoMigrate(&model.Order{}); err != nil {
-		log.Error("auto-migrate failed", "error", err)
-		return nil, err
-	}
 	return &PostgresRepository{db: db, log: log}, nil
 }
 

@@ -1,8 +1,3 @@
--- =============================================================================
--- Order DB bootstrap. The order service uses gorm AutoMigrate for the schema;
--- this file documents the canonical shape and seeds extensions.
--- =============================================================================
-
 CREATE TABLE IF NOT EXISTS orders (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     TEXT        NOT NULL,

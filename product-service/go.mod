@@ -5,6 +5,8 @@ go 1.26
 require (
 	github.com/elastic/go-elasticsearch/v8 v8.15.0
 	github.com/go-chi/chi/v5 v5.1.0
+	github.com/golang-migrate/migrate/v4 v4.19.1
+	github.com/jackc/pgx/v5 v5.5.5
 	github.com/prometheus/client_golang v1.20.5
 	github.com/toainguyen/ecommerce/pkg v0.0.0
 	gorm.io/datatypes v1.2.5
@@ -25,9 +27,9 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
-	github.com/jackc/pgx/v5 v5.5.5 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect

@@ -39,8 +39,7 @@ Observability: app /metrics + kube-state-metrics + node-exporter ─► Promethe
 product-service/ cart-service/ order-service/   # Go apps (per-service go.mod + go.work)
   cmd/server   cmd/worker (order only)
   internal/{config,delivery/http,usecase,repository,model,observability,workflow}
-deploy/k8s/{infra,apps,ingress,observability}    # raw Kubernetes manifests
-infra/                                            # init.sql + Debezium connector
+deploy/k8s/{infra,apps,ingress,observability}    # raw Kubernetes manifests (+ Debezium connector)
 api-gateway/nginx.conf.template                   # reference (Ingress is primary)
 ```
 
@@ -76,4 +75,6 @@ make validate             # kubectl client-side dry-run of all manifests
 ```
 
 > Stubs: handlers return mock/minimal data; saga activities are no-ops that drive the
-> state machine. No auth, no migration framework (raw `init.sql` + gorm `AutoMigrate`).
+> state machine. No auth. Schema is managed by golang-migrate: SQL migrations are
+> embedded in each service binary (`internal/migration/sql`) and applied at startup
+> from `main.go`. The product migration also sets up the Debezium CDC publication.

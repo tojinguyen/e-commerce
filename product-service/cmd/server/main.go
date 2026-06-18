@@ -12,6 +12,7 @@ import (
 	"github.com/toainguyen/ecommerce/product-service/internal/config"
 	delivery "github.com/toainguyen/ecommerce/product-service/internal/delivery/http"
 	"github.com/toainguyen/ecommerce/pkg/observability"
+	"github.com/toainguyen/ecommerce/product-service/internal/migration"
 	"github.com/toainguyen/ecommerce/product-service/internal/repository"
 	"github.com/toainguyen/ecommerce/product-service/internal/usecase"
 )
@@ -26,6 +27,12 @@ func main() {
 	if err != nil {
 		log.Warn("tracing init failed (continuing without traces)", "error", err)
 		shutdownTracing = func(context.Context) error { return nil }
+	}
+
+	// Run schema migrations before opening repositories.
+	if err := migration.Run(cfg.PostgresDSN, log); err != nil {
+		log.Error("fatal: migration failed", "error", err)
+		os.Exit(1)
 	}
 
 	// Repositories (adapters).
