@@ -8,8 +8,6 @@ import (
 	"github.com/toainguyen/ecommerce/product-service/internal/model"
 )
 
-const productIndex = "products"
-
 // ElasticRepository implements SearchRepository against Elasticsearch.
 type ElasticRepository struct {
 	es  *elasticsearch.Client

@@ -1,9 +1,12 @@
 # ============================================================================
 # E-commerce Microservices — Makefile
-# Build images, side-load into kind, apply manifests, and drive local dev.
+#
+# Recipes are written to run under BOTH Windows cmd.exe (GNU Make's default
+# shell when invoked from PowerShell/cmd) and POSIX sh. That means: no bash
+# `for` loops, no grep/awk — just plain `cd <dir> && <cmd>` lines, which both
+# shells understand.
 # ============================================================================
 
-SERVICES      := product-service cart-service order-service
 REGISTRY      ?= ecommerce
 TAG           ?= dev
 KIND_CLUSTER  ?= ecommerce
@@ -14,38 +17,41 @@ K8S_DIR       := deploy/k8s
 ## ---- Go ----------------------------------------------------------------
 
 .PHONY: tidy
-tidy: ## go mod tidy for every service
-	@for s in $(SERVICES); do echo ">> tidy $$s"; (cd $$s && go mod tidy); done
+tidy: ## go mod tidy for every module
+	cd pkg && go mod tidy
+	cd product-service && go mod tidy
+	cd cart-service && go mod tidy
+	cd order-service && go mod tidy
 
 .PHONY: build
 build: ## go build ./... for every service
-	@for s in $(SERVICES); do echo ">> build $$s"; (cd $$s && go build ./...); done
+	cd product-service && go build ./...
+	cd cart-service && go build ./...
+	cd order-service && go build ./...
 
 .PHONY: work
 work: ## (re)generate go.work
-	go work use ./product-service ./cart-service ./order-service
+	go work use ./pkg ./product-service ./cart-service ./order-service
 
 ## ---- Docker images -----------------------------------------------------
 
 .PHONY: images
-images: ## build a docker image per service
-	@for s in $(SERVICES); do \
-		echo ">> docker build $$s"; \
-		docker build -t $(REGISTRY)/$$s:$(TAG) ./$$s; \
-	done
+images: ## build a docker image per service (context = repo root, for shared ./pkg)
+	docker build -t $(REGISTRY)/product-service:$(TAG) -f product-service/Dockerfile .
+	docker build -t $(REGISTRY)/cart-service:$(TAG) -f cart-service/Dockerfile .
+	docker build -t $(REGISTRY)/order-service:$(TAG) -f order-service/Dockerfile .
 
 .PHONY: kind-load
 kind-load: ## side-load images into the kind cluster (no registry needed)
-	@for s in $(SERVICES); do \
-		echo ">> kind load $$s"; \
-		kind load docker-image $(REGISTRY)/$$s:$(TAG) --name $(KIND_CLUSTER); \
-	done
+	kind load docker-image $(REGISTRY)/product-service:$(TAG) --name $(KIND_CLUSTER)
+	kind load docker-image $(REGISTRY)/cart-service:$(TAG) --name $(KIND_CLUSTER)
+	kind load docker-image $(REGISTRY)/order-service:$(TAG) --name $(KIND_CLUSTER)
 
 ## ---- Cluster lifecycle -------------------------------------------------
 
 .PHONY: cluster-up
 cluster-up: ## create a local kind cluster + ingress + metrics-server
-	kind create cluster --name $(KIND_CLUSTER) || true
+	kind create cluster --name $(KIND_CLUSTER)
 	kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 	kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 	@echo "NOTE: on kind, patch metrics-server with --kubelet-insecure-tls if it CrashLoops."
@@ -80,10 +86,7 @@ validate: ## client-side dry-run of every manifest
 
 .PHONY: register-connector
 register-connector: ## register the Debezium Postgres source connector via Connect REST API
-	kubectl -n ecommerce exec deploy/kafka-connect -- \
-		curl -s -X POST -H "Content-Type: application/json" \
-		--data @/dev/stdin http://localhost:8083/connectors \
-		< $(K8S_DIR)/infra/debezium/register-postgres-connector.json
+	kubectl -n ecommerce exec -i deploy/kafka-connect -- curl -s -X POST -H "Content-Type: application/json" http://localhost:8083/connectors -d @- < $(K8S_DIR)/infra/debezium/register-postgres-connector.json
 
 ## ---- Port-forwards (run in separate terminals) -------------------------
 
@@ -100,6 +103,19 @@ pf-temporal: ## Temporal UI -> http://localhost:8088
 	kubectl -n ecommerce port-forward svc/temporal-ui 8088:8080
 
 .PHONY: help
-help: ## show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+help: ## show available targets
+	@echo Targets:
+	@echo   tidy                go mod tidy for every module
+	@echo   build               go build ./... for every service
+	@echo   work                regenerate go.work
+	@echo   images              build a docker image per service
+	@echo   kind-load           side-load images into the kind cluster
+	@echo   cluster-up          create kind cluster + ingress + metrics-server
+	@echo   cluster-down        delete the kind cluster
+	@echo   deploy              apply all manifests
+	@echo   undeploy            delete all manifests
+	@echo   validate            client-side dry-run of all manifests
+	@echo   register-connector  register the Debezium Postgres CDC source
+	@echo   pf-grafana          port-forward Grafana  (localhost:3000)
+	@echo   pf-jaeger           port-forward Jaeger   (localhost:16686)
+	@echo   pf-temporal         port-forward Temporal (localhost:8088)
