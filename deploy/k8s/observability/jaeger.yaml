@@ -21,6 +21,8 @@ spec:
           env:
             - name: COLLECTOR_OTLP_ENABLED
               value: "true"
+          args:
+            - --query.base-path=/jaeger
           ports:
             - containerPort: 16686  # UI
             - containerPort: 4317   # OTLP gRPC

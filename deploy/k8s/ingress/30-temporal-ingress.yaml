@@ -1,0 +1,21 @@
+# Temporal UI on dedicated host temporal.localhost — no path rewriting needed.
+# temporal.localhost resolves to 127.0.0.1 in modern browsers without /etc/hosts changes.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: temporal-ui
+  namespace: ecommerce
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: temporal.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: temporal-ui
+                port:
+                  number: 8080

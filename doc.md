@@ -50,13 +50,19 @@ All routed through the ingress at `http://localhost`.
 
 ## Observability
 
-Run each in a separate terminal (port-forward required):
+Accessible via NGINX Ingress — no port-forward needed:
 
-| Tool | Command | URL |
-|------|---------|-----|
-| Grafana | `make pf-grafana` | http://localhost:3000 |
-| Jaeger | `make pf-jaeger` | http://localhost:16686 |
-| Temporal UI | `make pf-temporal` | http://localhost:8088 |
+| Tool | URL | Notes |
+|------|-----|-------|
+| Grafana | http://localhost/grafana | Login: `admin` / `admin` |
+| Jaeger | http://localhost/jaeger | |
+| Temporal UI | http://temporal.localhost | See note below |
+
+> **Temporal UI:** `temporal.localhost` resolves to `127.0.0.1` in most modern browsers automatically.
+> If it doesn't load, add this line to `C:\Windows\System32\drivers\etc\hosts`:
+> ```
+> 127.0.0.1 temporal.localhost
+> ```
 
 ---
 
