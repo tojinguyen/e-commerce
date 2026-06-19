@@ -1,3 +1,8 @@
+// @title           Product Service API
+// @version         1.0
+// @description     Product catalog service with Elasticsearch-backed search and autocomplete.
+// @host            localhost:8080
+// @BasePath        /
 package main
 
 import (
@@ -11,10 +16,11 @@ import (
 
 	"github.com/toainguyen/ecommerce/product-service/internal/config"
 	delivery "github.com/toainguyen/ecommerce/product-service/internal/delivery/http"
-	"github.com/toainguyen/ecommerce/pkg/observability"
+	_ "github.com/toainguyen/ecommerce/product-service/docs"
 	"github.com/toainguyen/ecommerce/product-service/internal/migration"
 	"github.com/toainguyen/ecommerce/product-service/internal/repository"
 	"github.com/toainguyen/ecommerce/product-service/internal/usecase"
+	"github.com/toainguyen/ecommerce/pkg/observability"
 )
 
 func main() {

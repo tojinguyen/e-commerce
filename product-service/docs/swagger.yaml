@@ -1,0 +1,134 @@
+basePath: /
+definitions:
+  github_com_toainguyen_ecommerce_product-service_internal_model.Product:
+    properties:
+      attributes:
+        description: Attributes stores schema-less product attributes as JSONB (color,
+          size, specs...).
+        items:
+          type: integer
+        type: array
+      created_at:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      price_cents:
+        type: integer
+      sku:
+        type: string
+      stock:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Product catalog service with Elasticsearch-backed search and autocomplete.
+  title: Product Service API
+  version: "1.0"
+paths:
+  /api/v1/products:
+    post:
+      consumes:
+      - application/json
+      description: Persists a new product to PostgreSQL and queues it for Elasticsearch
+        indexing
+      parameters:
+      - description: Product payload
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a product
+      tags:
+      - products
+  /api/v1/products/search:
+    get:
+      description: Full-text search against Elasticsearch; returns matching products
+        with relevance scores
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Max results to return (default 10)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Search products
+      tags:
+      - products
+  /api/v1/products/suggest:
+    get:
+      description: Returns product name suggestions for a given prefix using Elasticsearch
+        completion
+      parameters:
+      - description: Prefix to autocomplete
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Max suggestions (default 5)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Autocomplete suggestions
+      tags:
+      - products
+swagger: "2.0"

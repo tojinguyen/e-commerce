@@ -1,0 +1,95 @@
+basePath: /
+definitions:
+  github_com_toainguyen_ecommerce_order-service_internal_model.Order:
+    properties:
+      created_at:
+        type: string
+      currency:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          type: integer
+        type: array
+      status:
+        type: string
+      total_cents:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      workflow_id:
+        type: string
+    type: object
+host: localhost:8082
+info:
+  contact: {}
+  description: Order management service; order lifecycle is driven by a Temporal saga
+    workflow.
+  title: Order Service API
+  version: "1.0"
+paths:
+  /api/v1/orders:
+    post:
+      consumes:
+      - application/json
+      description: Starts an OrderWorkflow saga via Temporal; returns 202 Accepted
+        with the pending order
+      parameters:
+      - description: Order payload
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create an order
+      tags:
+      - orders
+  /api/v1/orders/{id}:
+    get:
+      description: Returns the order with the given UUID; reflects the latest Temporal
+        workflow status
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get an order
+      tags:
+      - orders
+swagger: "2.0"

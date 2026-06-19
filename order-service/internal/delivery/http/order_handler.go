@@ -20,7 +20,17 @@ func NewOrderHandler(uc *usecase.OrderUsecase, log *slog.Logger) *OrderHandler {
 	return &OrderHandler{uc: uc, log: log}
 }
 
-// Create handles POST /api/v1/orders.
+// Create godoc
+// @Summary      Create an order
+// @Description  Starts an OrderWorkflow saga via Temporal; returns 202 Accepted with the pending order
+// @Tags         orders
+// @Accept       json
+// @Produce      json
+// @Param        order  body      model.Order  true  "Order payload"
+// @Success      202    {object}  model.Order
+// @Failure      400    {object}  map[string]string
+// @Failure      500    {object}  map[string]string
+// @Router       /api/v1/orders [post]
 func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var o model.Order
 	if err := json.NewDecoder(r.Body).Decode(&o); err != nil {
@@ -36,7 +46,15 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, created)
 }
 
-// Get handles GET /api/v1/orders/{id}.
+// Get godoc
+// @Summary      Get an order
+// @Description  Returns the order with the given UUID; reflects the latest Temporal workflow status
+// @Tags         orders
+// @Produce      json
+// @Param        id   path      string  true  "Order UUID"
+// @Success      200  {object}  model.Order
+// @Failure      404  {object}  map[string]string
+// @Router       /api/v1/orders/{id} [get]
 func (h *OrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	order, err := h.uc.GetOrder(r.Context(), id)

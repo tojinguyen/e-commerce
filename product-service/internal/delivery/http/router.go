@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // NewRouter wires middleware, health/metrics endpoints, and the product routes.
@@ -19,6 +20,9 @@ func NewRouter(h *ProductHandler) http.Handler {
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
 	r.Get("/readyz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ready")) })
 	r.Handle("/metrics", promhttp.Handler())
+
+	// Swagger UI.
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	// Product API.
 	r.Route("/api/v1/products", func(r chi.Router) {

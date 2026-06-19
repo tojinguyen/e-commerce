@@ -33,6 +33,12 @@ build: ## go build ./... for every service
 work: ## (re)generate go.work
 	go work use ./pkg ./product-service ./cart-service ./order-service
 
+.PHONY: swag
+swag: ## regenerate swagger docs for every service (requires swag CLI)
+	cd product-service && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+	cd cart-service && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+	cd order-service && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+
 ## ---- Docker images -----------------------------------------------------
 
 .PHONY: images
@@ -115,6 +121,7 @@ help: ## show available targets
 	@echo   deploy              build images, load into kind, apply all manifests
 	@echo   undeploy            delete all manifests
 	@echo   validate            client-side dry-run of all manifests
+	@echo   swag                regenerate swagger docs for every service
 	@echo   register-connector  register the Debezium Postgres CDC source
 	@echo   pf-grafana          port-forward Grafana  (localhost:3000)
 	@echo   pf-jaeger           port-forward Jaeger   (localhost:16686)

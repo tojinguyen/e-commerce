@@ -20,7 +20,17 @@ func NewProductHandler(uc *usecase.ProductUsecase, log *slog.Logger) *ProductHan
 	return &ProductHandler{uc: uc, log: log}
 }
 
-// Create handles POST /api/v1/products.
+// Create godoc
+// @Summary      Create a product
+// @Description  Persists a new product to PostgreSQL and queues it for Elasticsearch indexing
+// @Tags         products
+// @Accept       json
+// @Produce      json
+// @Param        product  body      model.Product  true  "Product payload"
+// @Success      201      {object}  model.Product
+// @Failure      400      {object}  map[string]string
+// @Failure      500      {object}  map[string]string
+// @Router       /api/v1/products [post]
 func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var p model.Product
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
@@ -35,7 +45,16 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, p)
 }
 
-// Search handles GET /api/v1/products/search?q=...&size=...
+// Search godoc
+// @Summary      Search products
+// @Description  Full-text search against Elasticsearch; returns matching products with relevance scores
+// @Tags         products
+// @Produce      json
+// @Param        q     query  string  true   "Search query"
+// @Param        size  query  int     false  "Max results to return (default 10)"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      500   {object}  map[string]string
+// @Router       /api/v1/products/search [get]
 func (h *ProductHandler) Search(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
@@ -47,7 +66,16 @@ func (h *ProductHandler) Search(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"query": q, "results": results})
 }
 
-// Suggest handles GET /api/v1/products/suggest?q=...
+// Suggest godoc
+// @Summary      Autocomplete suggestions
+// @Description  Returns product name suggestions for a given prefix using Elasticsearch completion
+// @Tags         products
+// @Produce      json
+// @Param        q     query  string  true   "Prefix to autocomplete"
+// @Param        size  query  int     false  "Max suggestions (default 5)"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      500   {object}  map[string]string
+// @Router       /api/v1/products/suggest [get]
 func (h *ProductHandler) Suggest(w http.ResponseWriter, r *http.Request) {
 	prefix := r.URL.Query().Get("q")
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))

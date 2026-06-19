@@ -1,3 +1,8 @@
+// @title           Order Service API
+// @version         1.0
+// @description     Order management service; order lifecycle is driven by a Temporal saga workflow.
+// @host            localhost:8082
+// @BasePath        /
 package main
 
 import (
@@ -11,10 +16,11 @@ import (
 
 	"github.com/toainguyen/ecommerce/order-service/internal/config"
 	delivery "github.com/toainguyen/ecommerce/order-service/internal/delivery/http"
-	"github.com/toainguyen/ecommerce/pkg/observability"
+	_ "github.com/toainguyen/ecommerce/order-service/docs"
 	"github.com/toainguyen/ecommerce/order-service/internal/migration"
 	"github.com/toainguyen/ecommerce/order-service/internal/repository"
 	"github.com/toainguyen/ecommerce/order-service/internal/usecase"
+	"github.com/toainguyen/ecommerce/pkg/observability"
 	"go.temporal.io/sdk/client"
 )
 
