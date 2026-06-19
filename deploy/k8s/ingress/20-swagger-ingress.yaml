@@ -1,0 +1,77 @@
+# Exposes the Swagger UI for each service at a unique external path.
+#
+# Rewrite rule strips the service-name segment before forwarding:
+#   /swagger/product/(...) → /swagger/$1 on product-service
+#   /swagger/cart/(...)    → /swagger/$1 on cart-service
+#   /swagger/order/(...)   → /swagger/$1 on order-service
+#
+# Access via:
+#   http://localhost/swagger/product/index.html
+#   http://localhost/swagger/cart/index.html
+#   http://localhost/swagger/order/index.html
+#
+# Separate Ingress objects are required because rewrite-target is a
+# per-Ingress annotation and cannot differ between paths in one object.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: product-swagger
+  namespace: ecommerce
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /swagger/$1
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /swagger/product/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: product-service
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cart-swagger
+  namespace: ecommerce
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /swagger/$1
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /swagger/cart/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: cart-service
+                port:
+                  number: 8081
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: order-swagger
+  namespace: ecommerce
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /swagger/$1
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /swagger/order/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: order-service
+                port:
+                  number: 8082

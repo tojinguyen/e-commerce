@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 // NewLogger returns a JSON slog logger so Promtail/Loki can parse fields cleanly.
@@ -48,7 +48,7 @@ func InitTracing(ctx context.Context, serviceName, endpoint, environment string)
 	res, err := resource.Merge(resource.Default(), resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceName(serviceName),
-		semconv.DeploymentEnvironment(environment),
+		semconv.DeploymentEnvironmentName(environment),
 	))
 	if err != nil {
 		return nil, err

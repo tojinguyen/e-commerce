@@ -57,7 +57,7 @@ kind-load: ## side-load images into the kind cluster (no registry needed)
 
 .PHONY: cluster-up
 cluster-up: ## create a local kind cluster + ingress + metrics-server
-	kind create cluster --name $(KIND_CLUSTER)
+	kind create cluster --name $(KIND_CLUSTER) --config deploy/kind-config.yaml
 	kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 	kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 	kubectl patch deployment metrics-server -n kube-system --patch-file $(K8S_DIR)/system/metrics-server-patch.yaml
@@ -73,6 +73,10 @@ deploy: images kind-load ## build images, load into kind, then apply all manifes
 	kubectl apply -f $(K8S_DIR)/00-namespace.yaml
 	kubectl apply -f $(K8S_DIR)/infra/
 	kubectl apply -f $(K8S_DIR)/apps/
+	kubectl wait --namespace ingress-nginx \
+		--for=condition=ready pod \
+		--selector=app.kubernetes.io/component=controller \
+		--timeout=180s
 	kubectl apply -f $(K8S_DIR)/ingress/
 	kubectl apply -f $(K8S_DIR)/observability/
 
@@ -95,6 +99,14 @@ register-connector: ## register the Debezium Postgres source connector via Conne
 	kubectl -n ecommerce exec -i deploy/kafka-connect -- curl -s -X POST -H "Content-Type: application/json" http://localhost:8083/connectors -d @- < $(K8S_DIR)/infra/debezium/register-postgres-connector.json
 
 ## ---- Port-forwards (run in separate terminals) -------------------------
+
+.PHONY: pf-ingress
+pf-ingress: ## Ingress -> http://localhost:80 (workaround when cluster lacks extraPortMappings)
+	kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 80:80
+
+.PHONY: pf-product
+pf-product: ## product-service swagger -> http://localhost:8080/swagger/index.html
+	kubectl -n ecommerce port-forward svc/product-service 8080:8080
 
 .PHONY: pf-grafana
 pf-grafana: ## Grafana -> http://localhost:3000
@@ -123,6 +135,8 @@ help: ## show available targets
 	@echo   validate            client-side dry-run of all manifests
 	@echo   swag                regenerate swagger docs for every service
 	@echo   register-connector  register the Debezium Postgres CDC source
+	@echo   pf-ingress          port-forward ingress  (localhost:80) — temp workaround
+	@echo   pf-product          port-forward product-service swagger (localhost:8080)
 	@echo   pf-grafana          port-forward Grafana  (localhost:3000)
 	@echo   pf-jaeger           port-forward Jaeger   (localhost:16686)
 	@echo   pf-temporal         port-forward Temporal (localhost:8088)
