@@ -66,6 +66,14 @@ cluster-up: ## create a local kind cluster + ingress + metrics-server
 cluster-down: ## delete the kind cluster
 	kind delete cluster --name $(KIND_CLUSTER)
 
+.PHONY: cluster-pause
+cluster-pause: ## pause the kind cluster (saves CPU/RAM without losing state)
+	docker pause $(KIND_CLUSTER)-control-plane
+
+.PHONY: cluster-resume
+cluster-resume: ## resume a paused kind cluster
+	docker unpause $(KIND_CLUSTER)-control-plane
+
 ## ---- Deploy ------------------------------------------------------------
 
 .PHONY: deploy
@@ -130,6 +138,8 @@ help: ## show available targets
 	@echo   kind-load           side-load images into the kind cluster
 	@echo   cluster-up          create kind cluster + ingress + metrics-server
 	@echo   cluster-down        delete the kind cluster
+	@echo   cluster-pause       pause the kind cluster (saves CPU/RAM)
+	@echo   cluster-resume      resume a paused kind cluster
 	@echo   deploy              build images, load into kind, apply all manifests
 	@echo   undeploy            delete all manifests
 	@echo   validate            client-side dry-run of all manifests
