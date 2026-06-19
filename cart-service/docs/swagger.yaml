@@ -1,0 +1,95 @@
+basePath: /
+definitions:
+  github_com_toainguyen_ecommerce_cart-service_internal_model.Cart:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.CartItem'
+        type: array
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_toainguyen_ecommerce_cart-service_internal_model.CartItem:
+    properties:
+      product_id:
+        type: string
+      quantity:
+        type: integer
+      sku:
+        type: string
+      unit_cents:
+        type: integer
+    type: object
+host: localhost:8081
+info:
+  contact: {}
+  description: Shopping cart service backed by MongoDB.
+  title: Cart Service API
+  version: "1.0"
+paths:
+  /api/v1/carts:
+    get:
+      description: Returns the current cart for the user identified by the X-User-ID
+        header
+      parameters:
+      - description: User identifier (falls back to 'anonymous')
+        in: header
+        name: X-User-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get cart
+      tags:
+      - carts
+    put:
+      consumes:
+      - application/json
+      description: Creates or replaces the cart for the user identified by the X-User-ID
+        header
+      parameters:
+      - description: User identifier (falls back to 'anonymous')
+        in: header
+        name: X-User-ID
+        type: string
+      - description: Cart payload
+        in: body
+        name: cart
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Upsert cart
+      tags:
+      - carts
+swagger: "2.0"

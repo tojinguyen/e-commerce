@@ -27,7 +27,18 @@ func userID(r *http.Request) string {
 	return "anonymous"
 }
 
-// Upsert handles PUT /api/v1/carts.
+// Upsert godoc
+// @Summary      Upsert cart
+// @Description  Creates or replaces the cart for the user identified by the X-User-ID header
+// @Tags         carts
+// @Accept       json
+// @Produce      json
+// @Param        X-User-ID  header    string      false  "User identifier (falls back to 'anonymous')"
+// @Param        cart       body      model.Cart  true   "Cart payload"
+// @Success      200        {object}  model.Cart
+// @Failure      400        {object}  map[string]string
+// @Failure      500        {object}  map[string]string
+// @Router       /api/v1/carts [put]
 func (h *CartHandler) Upsert(w http.ResponseWriter, r *http.Request) {
 	var cart model.Cart
 	if err := json.NewDecoder(r.Body).Decode(&cart); err != nil {
@@ -43,7 +54,15 @@ func (h *CartHandler) Upsert(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, cart)
 }
 
-// Get handles GET /api/v1/carts.
+// Get godoc
+// @Summary      Get cart
+// @Description  Returns the current cart for the user identified by the X-User-ID header
+// @Tags         carts
+// @Produce      json
+// @Param        X-User-ID  header    string  false  "User identifier (falls back to 'anonymous')"
+// @Success      200        {object}  model.Cart
+// @Failure      500        {object}  map[string]string
+// @Router       /api/v1/carts [get]
 func (h *CartHandler) Get(w http.ResponseWriter, r *http.Request) {
 	cart, err := h.uc.GetCart(r.Context(), userID(r))
 	if err != nil {

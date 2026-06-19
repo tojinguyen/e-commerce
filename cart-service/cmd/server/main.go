@@ -1,3 +1,8 @@
+// @title           Cart Service API
+// @version         1.0
+// @description     Shopping cart service backed by MongoDB.
+// @host            localhost:8081
+// @BasePath        /
 package main
 
 import (
@@ -11,9 +16,10 @@ import (
 
 	"github.com/toainguyen/ecommerce/cart-service/internal/config"
 	delivery "github.com/toainguyen/ecommerce/cart-service/internal/delivery/http"
-	"github.com/toainguyen/ecommerce/pkg/observability"
+	_ "github.com/toainguyen/ecommerce/cart-service/docs"
 	"github.com/toainguyen/ecommerce/cart-service/internal/repository"
 	"github.com/toainguyen/ecommerce/cart-service/internal/usecase"
+	"github.com/toainguyen/ecommerce/pkg/observability"
 )
 
 func main() {
