@@ -78,6 +78,7 @@ spec:
       labels:
         app: temporal
     spec:
+      enableServiceLinks: false
       containers:
         - name: temporal
           image: temporalio/auto-setup:1.25.2
@@ -127,6 +128,7 @@ spec:
       labels:
         app: temporal-ui
     spec:
+      enableServiceLinks: false
       containers:
         - name: temporal-ui
           image: temporalio/ui:2.31.2

@@ -54,7 +54,7 @@ cluster-up: ## create a local kind cluster + ingress + metrics-server
 	kind create cluster --name $(KIND_CLUSTER)
 	kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
 	kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-	@echo "NOTE: on kind, patch metrics-server with --kubelet-insecure-tls if it CrashLoops."
+	kubectl patch deployment metrics-server -n kube-system --patch-file $(K8S_DIR)/system/metrics-server-patch.yaml
 
 .PHONY: cluster-down
 cluster-down: ## delete the kind cluster
@@ -63,7 +63,7 @@ cluster-down: ## delete the kind cluster
 ## ---- Deploy ------------------------------------------------------------
 
 .PHONY: deploy
-deploy: ## apply all manifests (namespaces -> infra -> apps -> ingress -> observability)
+deploy: images kind-load ## build images, load into kind, then apply all manifests
 	kubectl apply -f $(K8S_DIR)/00-namespace.yaml
 	kubectl apply -f $(K8S_DIR)/infra/
 	kubectl apply -f $(K8S_DIR)/apps/
@@ -112,7 +112,7 @@ help: ## show available targets
 	@echo   kind-load           side-load images into the kind cluster
 	@echo   cluster-up          create kind cluster + ingress + metrics-server
 	@echo   cluster-down        delete the kind cluster
-	@echo   deploy              apply all manifests
+	@echo   deploy              build images, load into kind, apply all manifests
 	@echo   undeploy            delete all manifests
 	@echo   validate            client-side dry-run of all manifests
 	@echo   register-connector  register the Debezium Postgres CDC source

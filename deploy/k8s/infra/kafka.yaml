@@ -66,6 +66,11 @@ spec:
       labels:
         app: kafka
     spec:
+      enableServiceLinks: false
+      initContainers:
+        - name: wait-for-zookeeper
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z zookeeper 2181; do echo waiting for zookeeper; sleep 2; done"]
       containers:
         - name: kafka
           image: confluentinc/cp-kafka:7.6.1
@@ -80,5 +85,9 @@ spec:
               value: "1"
             - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
               value: "0"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
           ports:
             - containerPort: 9092
