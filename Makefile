@@ -74,6 +74,11 @@ cluster-pause: ## pause the kind cluster (saves CPU/RAM without losing state)
 cluster-resume: ## resume a paused kind cluster
 	docker unpause $(KIND_CLUSTER)-control-plane
 
+.PHONY: cluster-recover
+cluster-recover: ## recover kind cluster after Docker Desktop restart (re-attaches network then starts)
+	docker network connect kind $(KIND_CLUSTER)-control-plane 2>/dev/null || true
+	docker start $(KIND_CLUSTER)-control-plane
+
 ## ---- Deploy ------------------------------------------------------------
 
 .PHONY: deploy
@@ -140,6 +145,7 @@ help: ## show available targets
 	@echo   cluster-down        delete the kind cluster
 	@echo   cluster-pause       pause the kind cluster (saves CPU/RAM)
 	@echo   cluster-resume      resume a paused kind cluster
+	@echo   cluster-recover     recover cluster after Docker Desktop restart
 	@echo   deploy              build images, load into kind, apply all manifests
 	@echo   undeploy            delete all manifests
 	@echo   validate            client-side dry-run of all manifests
