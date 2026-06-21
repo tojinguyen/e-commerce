@@ -1,0 +1,6035 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.claude/settings.local.json
+.env.example
+.gitignore
+api-gateway/nginx.conf.template
+cart-service/cmd/server/main.go
+cart-service/Dockerfile
+cart-service/docs/docs.go
+cart-service/docs/swagger.json
+cart-service/docs/swagger.yaml
+cart-service/go.mod
+cart-service/internal/config/config.go
+cart-service/internal/delivery/http/cart_handler.go
+cart-service/internal/delivery/http/router.go
+cart-service/internal/model/cart.go
+cart-service/internal/repository/mongo_repo.go
+cart-service/internal/repository/repository.go
+cart-service/internal/usecase/cart_usecase.go
+deploy/k8s/00-namespace.yaml
+deploy/k8s/apps/cart-service.yaml
+deploy/k8s/apps/order-service.yaml
+deploy/k8s/apps/product-service.yaml
+deploy/k8s/infra/debezium/register-postgres-connector.json
+deploy/k8s/infra/elasticsearch.yaml
+deploy/k8s/infra/kafka-connect.yaml
+deploy/k8s/infra/kafka.yaml
+deploy/k8s/infra/mongodb.yaml
+deploy/k8s/infra/postgres-order.yaml
+deploy/k8s/infra/postgres-product.yaml
+deploy/k8s/infra/temporal.yaml
+deploy/k8s/ingress/10-ingress.yaml
+deploy/k8s/ingress/20-swagger-ingress.yaml
+deploy/k8s/ingress/30-temporal-ingress.yaml
+deploy/k8s/observability/grafana.yaml
+deploy/k8s/observability/ingress.yaml
+deploy/k8s/observability/jaeger.yaml
+deploy/k8s/observability/kube-state-metrics.yaml
+deploy/k8s/observability/loki.yaml
+deploy/k8s/observability/node-exporter.yaml
+deploy/k8s/observability/prometheus.yaml
+deploy/k8s/observability/promtail.yaml
+deploy/k8s/system/metrics-server-patch.yaml
+deploy/kind-config.yaml
+doc.md
+Makefile
+order-service/cmd/server/main.go
+order-service/cmd/worker/main.go
+order-service/Dockerfile
+order-service/docs/docs.go
+order-service/docs/swagger.json
+order-service/docs/swagger.yaml
+order-service/go.mod
+order-service/internal/config/config.go
+order-service/internal/delivery/http/order_handler.go
+order-service/internal/delivery/http/router.go
+order-service/internal/migration/migrate.go
+order-service/internal/migration/sql/000001_init.down.sql
+order-service/internal/migration/sql/000001_init.up.sql
+order-service/internal/model/order.go
+order-service/internal/repository/postgres_repo.go
+order-service/internal/repository/repository.go
+order-service/internal/usecase/order_usecase.go
+order-service/internal/workflow/activities.go
+order-service/internal/workflow/order_saga.go
+pkg/go.mod
+pkg/observability/observability.go
+product-service/cmd/server/main.go
+product-service/Dockerfile
+product-service/docs/docs.go
+product-service/docs/swagger.json
+product-service/docs/swagger.yaml
+product-service/go.mod
+product-service/internal/config/config.go
+product-service/internal/consumer/kafka_consumer.go
+product-service/internal/delivery/http/product_handler.go
+product-service/internal/delivery/http/router.go
+product-service/internal/migration/migrate.go
+product-service/internal/migration/sql/000001_init.down.sql
+product-service/internal/migration/sql/000001_init.up.sql
+product-service/internal/model/product.go
+product-service/internal/repository/elastic_repo.go
+product-service/internal/repository/postgres_repo.go
+product-service/internal/repository/repository.go
+product-service/internal/usecase/product_usecase.go
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".claude/settings.local.json">
+{
+  "permissions": {
+    "allow": [
+      "Bash(go mod *)",
+      "Bash(go get *)",
+      "Bash(go vet *)",
+      "PowerShell(Write-Output \"bash: $\\(\\(Get-Command bash -ErrorAction SilentlyContinue\\).Source\\)\"; Write-Output \"pwsh: $\\(\\(Get-Command pwsh -ErrorAction SilentlyContinue\\).Source\\)\"; Write-Output \"make: $\\(\\(Get-Command make -ErrorAction SilentlyContinue\\).Source\\)\")",
+      "PowerShell(make help; Write-Output \"----- BUILD -----\"; make build; Write-Output \"EXITCODE=$LASTEXITCODE\")",
+      "PowerShell(docker build -t ecommerce/product-service:dev -f product-service/Dockerfile . 2>&1 | Select-Object -Last 25; Write-Output \"EXIT=$LASTEXITCODE\")",
+      "Bash(ls infra/debezium)",
+      "Bash(grep -rln \"infra/debezium\\\\|infra\\\\\\\\\\\\\\\\debezium\" --include=*.md --include=Makefile --include=*.yaml .)"
+    ]
+  }
+}
+</file>
+
+<file path="product-service/internal/consumer/kafka_consumer.go">
+package consumer
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+
+	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/segmentio/kafka-go"
+)
+
+const (
+	topic     = "ecommerce.public.products"
+	groupID   = "product-service-es-indexer"
+	esIndex   = "products"
+)
+
+// debeziumEvent mirrors the Debezium JSON envelope for the products table.
+type debeziumEvent struct {
+	Before *productPayload `json:"before"`
+	After  *productPayload `json:"after"`
+	Op     string          `json:"op"` // c=create, u=update, d=delete, r=snapshot
+}
+
+type productPayload struct {
+	ID          string `json:"id"`
+	SKU         string `json:"sku"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	PriceCents  int64  `json:"price_cents"`
+	Currency    string `json:"currency"`
+	Stock       int    `json:"stock"`
+}
+
+// KafkaConsumer reads Debezium CDC events and keeps Elasticsearch in sync.
+type KafkaConsumer struct {
+	reader *kafka.Reader
+	es     *elasticsearch.Client
+	log    *slog.Logger
+}
+
+func NewKafkaConsumer(broker string, es *elasticsearch.Client, log *slog.Logger) *KafkaConsumer {
+	r := kafka.NewReader(kafka.ReaderConfig{
+		Brokers: []string{broker},
+		Topic:   topic,
+		GroupID: groupID,
+	})
+	return &KafkaConsumer{reader: r, es: es, log: log}
+}
+
+// Start runs the consume loop. It blocks until ctx is cancelled.
+func (c *KafkaConsumer) Start(ctx context.Context) {
+	c.log.Info("kafka consumer started", "topic", topic, "group", groupID)
+	defer c.reader.Close()
+
+	for {
+		msg, err := c.reader.ReadMessage(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return // graceful shutdown
+			}
+			c.log.Error("kafka read error", "error", err)
+			continue
+		}
+
+		if err := c.handle(ctx, msg.Value); err != nil {
+			c.log.Error("failed to handle kafka message", "error", err, "offset", msg.Offset)
+		}
+	}
+}
+
+func (c *KafkaConsumer) handle(ctx context.Context, raw []byte) error {
+	var event debeziumEvent
+	if err := json.Unmarshal(raw, &event); err != nil {
+		return fmt.Errorf("unmarshal debezium event: %w", err)
+	}
+
+	switch event.Op {
+	case "c", "u", "r": // create, update, snapshot read
+		if event.After == nil {
+			return nil
+		}
+		return c.index(ctx, event.After)
+	case "d": // delete
+		if event.Before == nil {
+			return nil
+		}
+		return c.delete(ctx, event.Before.ID)
+	}
+	return nil
+}
+
+func (c *KafkaConsumer) index(ctx context.Context, p *productPayload) error {
+	body, err := json.Marshal(p)
+	if err != nil {
+		return err
+	}
+	res, err := c.es.Index(esIndex, bytes.NewReader(body),
+		c.es.Index.WithDocumentID(p.ID),
+		c.es.Index.WithContext(ctx),
+	)
+	if err != nil {
+		return fmt.Errorf("es index: %w", err)
+	}
+	defer res.Body.Close()
+	if res.IsError() {
+		return fmt.Errorf("es index error: %s", res.String())
+	}
+	c.log.Info("indexed product", "id", p.ID, "sku", p.SKU)
+	return nil
+}
+
+func (c *KafkaConsumer) delete(ctx context.Context, id string) error {
+	res, err := c.es.Delete(esIndex, id,
+		c.es.Delete.WithContext(ctx),
+	)
+	if err != nil {
+		return fmt.Errorf("es delete: %w", err)
+	}
+	defer res.Body.Close()
+	if res.IsError() {
+		return fmt.Errorf("es delete error: %s", res.String())
+	}
+	c.log.Info("deleted product from index", "id", id)
+	return nil
+}
+</file>
+
+<file path=".env.example">
+# ---- Shared / local development environment ----
+# Copy to .env for local (non-k8s) runs. In Kubernetes these values come from
+# ConfigMaps/Secrets in deploy/k8s.
+
+# ---- Product Service (PostgreSQL + Elasticsearch) ----
+PRODUCT_HTTP_PORT=8080
+PRODUCT_PG_DSN=host=localhost port=5433 user=product password=product dbname=product_db sslmode=disable
+PRODUCT_ES_ADDRESS=http://localhost:9200
+
+# ---- Cart Service (MongoDB) ----
+CART_HTTP_PORT=8081
+CART_MONGO_URI=mongodb://localhost:27017
+CART_MONGO_DB=cart_db
+
+# ---- Order Service (PostgreSQL + Temporal) ----
+ORDER_HTTP_PORT=8082
+ORDER_PG_DSN=host=localhost port=5434 user=order password=order dbname=order_db sslmode=disable
+TEMPORAL_HOST_PORT=localhost:7233
+TEMPORAL_NAMESPACE=default
+TEMPORAL_TASK_QUEUE=order-task-queue
+
+# ---- Observability (OpenTelemetry / OTLP) ----
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_SERVICE_ENVIRONMENT=local
+LOG_LEVEL=info
+</file>
+
+<file path=".gitignore">
+# If you prefer the allow list template instead of the deny list, see community template:
+# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
+#
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Code coverage profiles and other test artifacts
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# env file
+.env
+
+# Editor/IDE
+# .idea/
+# .vscode/
+</file>
+
+<file path="api-gateway/nginx.conf.template">
+# =============================================================================
+# Reference NGINX gateway config.
+#
+# In Kubernetes the NGINX *Ingress* controller (deploy/k8s/ingress/10-ingress.yaml)
+# is the primary edge router. This file documents the equivalent routing for a
+# plain-Docker / bare-metal run, and is rendered with `envsubst` at container start.
+# =============================================================================
+
+upstream product_service { server ${PRODUCT_HOST}:${PRODUCT_PORT}; }
+upstream cart_service    { server ${CART_HOST}:${CART_PORT}; }
+upstream order_service   { server ${ORDER_HOST}:${ORDER_PORT}; }
+
+server {
+    listen 80;
+    server_name _;
+
+    # ---- Product Service ----
+    location /api/v1/products {
+        proxy_pass http://product_service;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # ---- Cart Service ----
+    location /api/v1/carts {
+        proxy_pass http://cart_service;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # ---- Order Service ----
+    location /api/v1/orders {
+        proxy_pass http://order_service;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /healthz { return 200 'ok'; add_header Content-Type text/plain; }
+}
+</file>
+
+<file path="cart-service/docs/docs.go">
+// Package docs Code generated by swaggo/swag. DO NOT EDIT
+package docs
+
+import "github.com/swaggo/swag"
+
+const docTemplate = `{
+    "schemes": {{ marshal .Schemes }},
+    "swagger": "2.0",
+    "info": {
+        "description": "{{escape .Description}}",
+        "title": "{{.Title}}",
+        "contact": {},
+        "version": "{{.Version}}"
+    },
+    "host": "{{.Host}}",
+    "basePath": "{{.BasePath}}",
+    "paths": {
+        "/api/v1/carts": {
+            "get": {
+                "description": "Returns the current cart for the user identified by the X-User-ID header",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "carts"
+                ],
+                "summary": "Get cart",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User identifier (falls back to 'anonymous')",
+                        "name": "X-User-ID",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Creates or replaces the cart for the user identified by the X-User-ID header",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "carts"
+                ],
+                "summary": "Upsert cart",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User identifier (falls back to 'anonymous')",
+                        "name": "X-User-ID",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Cart payload",
+                        "name": "cart",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_toainguyen_ecommerce_cart-service_internal_model.Cart": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.CartItem"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_toainguyen_ecommerce_cart-service_internal_model.CartItem": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "unit_cents": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}`
+
+// SwaggerInfo holds exported Swagger Info so clients can modify it
+var SwaggerInfo = &swag.Spec{
+	Version:          "1.0",
+	Host:             "localhost:8081",
+	BasePath:         "/",
+	Schemes:          []string{},
+	Title:            "Cart Service API",
+	Description:      "Shopping cart service backed by MongoDB.",
+	InfoInstanceName: "swagger",
+	SwaggerTemplate:  docTemplate,
+	LeftDelim:        "{{",
+	RightDelim:       "}}",
+}
+
+func init() {
+	swag.Register(SwaggerInfo.InstanceName(), SwaggerInfo)
+}
+</file>
+
+<file path="cart-service/docs/swagger.json">
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Shopping cart service backed by MongoDB.",
+        "title": "Cart Service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8081",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/carts": {
+            "get": {
+                "description": "Returns the current cart for the user identified by the X-User-ID header",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "carts"
+                ],
+                "summary": "Get cart",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User identifier (falls back to 'anonymous')",
+                        "name": "X-User-ID",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Creates or replaces the cart for the user identified by the X-User-ID header",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "carts"
+                ],
+                "summary": "Upsert cart",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User identifier (falls back to 'anonymous')",
+                        "name": "X-User-ID",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Cart payload",
+                        "name": "cart",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_toainguyen_ecommerce_cart-service_internal_model.Cart": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.CartItem"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_toainguyen_ecommerce_cart-service_internal_model.CartItem": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "unit_cents": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}
+</file>
+
+<file path="cart-service/docs/swagger.yaml">
+basePath: /
+definitions:
+  github_com_toainguyen_ecommerce_cart-service_internal_model.Cart:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.CartItem'
+        type: array
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_toainguyen_ecommerce_cart-service_internal_model.CartItem:
+    properties:
+      product_id:
+        type: string
+      quantity:
+        type: integer
+      sku:
+        type: string
+      unit_cents:
+        type: integer
+    type: object
+host: localhost:8081
+info:
+  contact: {}
+  description: Shopping cart service backed by MongoDB.
+  title: Cart Service API
+  version: "1.0"
+paths:
+  /api/v1/carts:
+    get:
+      description: Returns the current cart for the user identified by the X-User-ID
+        header
+      parameters:
+      - description: User identifier (falls back to 'anonymous')
+        in: header
+        name: X-User-ID
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get cart
+      tags:
+      - carts
+    put:
+      consumes:
+      - application/json
+      description: Creates or replaces the cart for the user identified by the X-User-ID
+        header
+      parameters:
+      - description: User identifier (falls back to 'anonymous')
+        in: header
+        name: X-User-ID
+        type: string
+      - description: Cart payload
+        in: body
+        name: cart
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_cart-service_internal_model.Cart'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Upsert cart
+      tags:
+      - carts
+swagger: "2.0"
+</file>
+
+<file path="cart-service/internal/config/config.go">
+package config
+
+import "os"
+
+// Config holds runtime configuration for the cart service.
+type Config struct {
+	HTTPPort string
+	MongoURI string
+	MongoDB  string
+
+	ServiceName  string
+	OTLPEndpoint string
+	Environment  string
+	LogLevel     string
+}
+
+func Load() Config {
+	return Config{
+		HTTPPort: getenv("CART_HTTP_PORT", "8081"),
+		MongoURI: getenv("CART_MONGO_URI", "mongodb://localhost:27017"),
+		MongoDB:  getenv("CART_MONGO_DB", "cart_db"),
+
+		ServiceName:  getenv("OTEL_SERVICE_NAME", "cart-service"),
+		OTLPEndpoint: getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
+		Environment:  getenv("OTEL_SERVICE_ENVIRONMENT", "local"),
+		LogLevel:     getenv("LOG_LEVEL", "info"),
+	}
+}
+
+func getenv(key, fallback string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return fallback
+}
+</file>
+
+<file path="cart-service/internal/model/cart.go">
+package model
+
+import "time"
+
+// CartItem is a single line in a cart.
+type CartItem struct {
+	ProductID string `json:"product_id" bson:"product_id"`
+	SKU       string `json:"sku" bson:"sku"`
+	Quantity  int    `json:"quantity" bson:"quantity"`
+	UnitCents int64  `json:"unit_cents" bson:"unit_cents"`
+}
+
+// Cart is the volatile, high-write document stored in MongoDB, keyed by user ID.
+type Cart struct {
+	UserID    string     `json:"user_id" bson:"_id"`
+	Items     []CartItem `json:"items" bson:"items"`
+	UpdatedAt time.Time  `json:"updated_at" bson:"updated_at"`
+}
+</file>
+
+<file path="cart-service/internal/repository/mongo_repo.go">
+package repository
+
+import (
+	"context"
+	"log/slog"
+	"time"
+
+	"github.com/toainguyen/ecommerce/cart-service/internal/model"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+const cartCollection = "carts"
+
+// MongoRepository implements CartRepository with the official mongo-go-driver.
+type MongoRepository struct {
+	coll *mongo.Collection
+	log  *slog.Logger
+}
+
+// NewMongoRepository connects to MongoDB, pings it (connection stub), and returns the repo.
+func NewMongoRepository(uri, dbName string, log *slog.Logger) (*MongoRepository, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	if err != nil {
+		log.Error("mongo connect failed", "error", err)
+		return nil, err
+	}
+	if err := client.Ping(ctx, nil); err != nil {
+		log.Error("mongo ping failed", "error", err)
+		return nil, err
+	}
+	log.Info("connected to mongodb", "db", dbName)
+
+	return &MongoRepository{coll: client.Database(dbName).Collection(cartCollection), log: log}, nil
+}
+
+// Upsert replaces (or inserts) the whole cart document for a user.
+func (r *MongoRepository) Upsert(ctx context.Context, cart *model.Cart) error {
+	cart.UpdatedAt = time.Now()
+	_, err := r.coll.ReplaceOne(
+		ctx,
+		bson.M{"_id": cart.UserID},
+		cart,
+		options.Replace().SetUpsert(true),
+	)
+	return err
+}
+
+func (r *MongoRepository) Get(ctx context.Context, userID string) (*model.Cart, error) {
+	var cart model.Cart
+	err := r.coll.FindOne(ctx, bson.M{"_id": userID}).Decode(&cart)
+	if err == mongo.ErrNoDocuments {
+		// Empty cart is a valid state.
+		return &model.Cart{UserID: userID, Items: []model.CartItem{}}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &cart, nil
+}
+</file>
+
+<file path="cart-service/internal/repository/repository.go">
+package repository
+
+import (
+	"context"
+
+	"github.com/toainguyen/ecommerce/cart-service/internal/model"
+)
+
+// CartRepository is the persistence port for carts (MongoDB).
+type CartRepository interface {
+	Upsert(ctx context.Context, cart *model.Cart) error
+	Get(ctx context.Context, userID string) (*model.Cart, error)
+}
+</file>
+
+<file path="cart-service/internal/usecase/cart_usecase.go">
+package usecase
+
+import (
+	"context"
+
+	"github.com/toainguyen/ecommerce/cart-service/internal/model"
+	"github.com/toainguyen/ecommerce/cart-service/internal/repository"
+)
+
+type CartUsecase struct {
+	repo repository.CartRepository
+}
+
+func NewCartUsecase(repo repository.CartRepository) *CartUsecase {
+	return &CartUsecase{repo: repo}
+}
+
+// SaveCart upserts the cart for the given user.
+func (u *CartUsecase) SaveCart(ctx context.Context, cart *model.Cart) error {
+	return u.repo.Upsert(ctx, cart)
+}
+
+// GetCart fetches the cart for the given user (empty cart if none).
+func (u *CartUsecase) GetCart(ctx context.Context, userID string) (*model.Cart, error) {
+	return u.repo.Get(ctx, userID)
+}
+</file>
+
+<file path="deploy/k8s/00-namespace.yaml">
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ecommerce
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+</file>
+
+<file path="deploy/k8s/apps/cart-service.yaml">
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cart-service-config
+  namespace: ecommerce
+data:
+  CART_HTTP_PORT: "8081"
+  CART_MONGO_URI: "mongodb://mongodb:27017"
+  CART_MONGO_DB: "cart_db"
+  OTEL_SERVICE_NAME: "cart-service"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger.observability:4318"
+  OTEL_SERVICE_ENVIRONMENT: "k8s"
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart-service
+  namespace: ecommerce
+  labels:
+    app: cart-service
+spec:
+  selector:
+    app: cart-service
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart-service
+  namespace: ecommerce
+  labels:
+    app: cart-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cart-service
+  template:
+    metadata:
+      labels:
+        app: cart-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: cart-service
+          image: ecommerce/cart-service:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          envFrom:
+            - configMapRef:
+                name: cart-service-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 15
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: cart-service
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: cart-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+</file>
+
+<file path="deploy/k8s/apps/order-service.yaml">
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-service-config
+  namespace: ecommerce
+data:
+  ORDER_HTTP_PORT: "8082"
+  ORDER_PG_DSN: "host=postgres-order port=5432 user=order password=order dbname=order_db sslmode=disable"
+  TEMPORAL_HOST_PORT: "temporal:7233"
+  TEMPORAL_NAMESPACE: "default"
+  TEMPORAL_TASK_QUEUE: "order-task-queue"
+  OTEL_SERVICE_NAME: "order-service"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger.observability:4318"
+  OTEL_SERVICE_ENVIRONMENT: "k8s"
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: ecommerce
+  labels:
+    app: order-service
+spec:
+  selector:
+    app: order-service
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+# API server (handles REST, starts workflows).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: ecommerce
+  labels:
+    app: order-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: order-service
+          image: ecommerce/order-service:dev
+          imagePullPolicy: IfNotPresent
+          command: ["/server"]
+          ports:
+            - containerPort: 8082
+          envFrom:
+            - configMapRef:
+                name: order-service-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            initialDelaySeconds: 10
+            periodSeconds: 15
+---
+# Temporal worker (executes the OrderWorkflow + activities). Scales independently.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-worker
+  namespace: ecommerce
+  labels:
+    app: order-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-worker
+  template:
+    metadata:
+      labels:
+        app: order-worker
+    spec:
+      containers:
+        - name: order-worker
+          image: ecommerce/order-service:dev
+          imagePullPolicy: IfNotPresent
+          command: ["/worker"]
+          envFrom:
+            - configMapRef:
+                name: order-service-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-service
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-worker
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-worker
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+</file>
+
+<file path="deploy/k8s/apps/product-service.yaml">
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: product-service-config
+  namespace: ecommerce
+data:
+  PRODUCT_HTTP_PORT: "8080"
+  PRODUCT_PG_DSN: "host=postgres-product port=5432 user=product password=product dbname=product_db sslmode=disable"
+  PRODUCT_ES_ADDRESS: "http://elasticsearch:9200"
+  KAFKA_BROKER: "kafka:9092"
+  OTEL_SERVICE_NAME: "product-service"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger.observability:4318"
+  OTEL_SERVICE_ENVIRONMENT: "k8s"
+  LOG_LEVEL: "info"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: ecommerce
+  labels:
+    app: product-service
+spec:
+  selector:
+    app: product-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: ecommerce
+  labels:
+    app: product-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: product-service
+          image: ecommerce/product-service:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: product-service-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: product-service
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: product-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+</file>
+
+<file path="deploy/k8s/infra/debezium/register-postgres-connector.json">
+{
+  "name": "product-postgres-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "plugin.name": "pgoutput",
+    "publication.name": "ecommerce_cdc",
+    "slot.name": "ecommerce_cdc_slot",
+
+    "database.hostname": "postgres-product",
+    "database.port": "5432",
+    "database.user": "product",
+    "database.password": "product",
+    "database.dbname": "product_db",
+
+    "topic.prefix": "ecommerce",
+    "table.include.list": "public.products",
+
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "false",
+
+    "snapshot.mode": "initial",
+    "tombstones.on.delete": "false"
+  }
+}
+</file>
+
+<file path="deploy/k8s/infra/elasticsearch.yaml">
+# Elasticsearch single-node (search target for the Product Service, fed by CDC).
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: ecommerce
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+    - port: 9200
+      targetPort: 9200
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: ecommerce
+spec:
+  serviceName: elasticsearch
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+          env:
+            - name: discovery.type
+              value: single-node
+            - name: xpack.security.enabled
+              value: "false"
+            - name: ES_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+          ports:
+            - containerPort: 9200
+          resources:
+            requests:
+              memory: "1Gi"
+            limits:
+              memory: "1.5Gi"
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health?wait_for_status=yellow&timeout=5s
+              port: 9200
+            initialDelaySeconds: 20
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+</file>
+
+<file path="deploy/k8s/infra/mongodb.yaml">
+# MongoDB for the Cart Service (volatile, high-frequency writes).
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: ecommerce
+spec:
+  clusterIP: None
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: ecommerce
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:7
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+          readinessProbe:
+            exec:
+              command: ["mongosh", "--eval", "db.adminCommand('ping')"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+</file>
+
+<file path="deploy/k8s/infra/postgres-order.yaml">
+# PostgreSQL for the Order Service (order state persistence). DB-per-service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-order
+  namespace: ecommerce
+spec:
+  clusterIP: None
+  selector:
+    app: postgres-order
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-order
+  namespace: ecommerce
+spec:
+  serviceName: postgres-order
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-order
+  template:
+    metadata:
+      labels:
+        app: postgres-order
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          env:
+            - name: POSTGRES_USER
+              value: order
+            - name: POSTGRES_PASSWORD
+              value: order
+            - name: POSTGRES_DB
+              value: order_db
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "order"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+</file>
+
+<file path="deploy/k8s/ingress/10-ingress.yaml">
+# Routes external traffic to the services. Install the NGINX Ingress controller
+# first (see `make cluster-up`). On kind, access via http://localhost/.
+#
+# No path rewrite: services mount their routes at the full /api/v1/<resource> path,
+# so the incoming path is forwarded unchanged.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ecommerce-gateway
+  namespace: ecommerce
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /api/v1/products
+            pathType: Prefix
+            backend:
+              service:
+                name: product-service
+                port:
+                  number: 8080
+          - path: /api/v1/carts
+            pathType: Prefix
+            backend:
+              service:
+                name: cart-service
+                port:
+                  number: 8081
+          - path: /api/v1/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: order-service
+                port:
+                  number: 8082
+</file>
+
+<file path="deploy/k8s/ingress/20-swagger-ingress.yaml">
+# Exposes the Swagger UI for each service at a unique external path.
+#
+# Rewrite rule strips the service-name segment before forwarding:
+#   /swagger/product/(...) → /swagger/$1 on product-service
+#   /swagger/cart/(...)    → /swagger/$1 on cart-service
+#   /swagger/order/(...)   → /swagger/$1 on order-service
+#
+# Access via:
+#   http://localhost/swagger/product/index.html
+#   http://localhost/swagger/cart/index.html
+#   http://localhost/swagger/order/index.html
+#
+# Separate Ingress objects are required because rewrite-target is a
+# per-Ingress annotation and cannot differ between paths in one object.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: product-swagger
+  namespace: ecommerce
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /swagger/$1
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /swagger/product/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: product-service
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cart-swagger
+  namespace: ecommerce
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /swagger/$1
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /swagger/cart/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: cart-service
+                port:
+                  number: 8081
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: order-swagger
+  namespace: ecommerce
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /swagger/$1
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /swagger/order/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: order-service
+                port:
+                  number: 8082
+</file>
+
+<file path="deploy/k8s/ingress/30-temporal-ingress.yaml">
+# Temporal UI on dedicated host temporal.localhost — no path rewriting needed.
+# temporal.localhost resolves to 127.0.0.1 in modern browsers without /etc/hosts changes.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: temporal-ui
+  namespace: ecommerce
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: temporal.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: temporal-ui
+                port:
+                  number: 8080
+</file>
+
+<file path="deploy/k8s/observability/ingress.yaml">
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: observability-tools
+  namespace: observability
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+          - path: /jaeger
+            pathType: Prefix
+            backend:
+              service:
+                name: jaeger
+                port:
+                  number: 16686
+</file>
+
+<file path="deploy/k8s/observability/kube-state-metrics.yaml">
+# kube-state-metrics: exposes cluster object metrics (Deployment replicas, HPA
+# status, pod phase) so you can watch horizontal scaling in Grafana/Prometheus.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-state-metrics
+  namespace: observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-state-metrics
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "services", "endpoints", "namespaces", "replicationcontrollers", "limitranges", "resourcequotas", "persistentvolumeclaims"]
+    verbs: ["list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["list", "watch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-state-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-state-metrics
+subjects:
+  - kind: ServiceAccount
+    name: kube-state-metrics
+    namespace: observability
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-state-metrics
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kube-state-metrics
+  template:
+    metadata:
+      labels:
+        app: kube-state-metrics
+    spec:
+      serviceAccountName: kube-state-metrics
+      containers:
+        - name: kube-state-metrics
+          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.13.0
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state-metrics
+  namespace: observability
+spec:
+  selector:
+    app: kube-state-metrics
+  ports:
+    - port: 8080
+      targetPort: 8080
+</file>
+
+<file path="deploy/k8s/observability/loki.yaml">
+# Loki: log aggregation (single-binary, filesystem storage for local dev).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-config
+  namespace: observability
+data:
+  loki.yaml: |
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    common:
+      instance_addr: 127.0.0.1
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        kvstore:
+          store: inmemory
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+    limits_config:
+      allow_structured_metadata: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+        - name: loki
+          image: grafana/loki:3.1.1
+          args: ["-config.file=/etc/loki/loki.yaml"]
+          ports:
+            - containerPort: 3100
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki
+            - name: storage
+              mountPath: /loki
+      volumes:
+        - name: config
+          configMap:
+            name: loki-config
+        - name: storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: observability
+spec:
+  selector:
+    app: loki
+  ports:
+    - port: 3100
+      targetPort: 3100
+</file>
+
+<file path="deploy/k8s/observability/node-exporter.yaml">
+# node-exporter: per-node host metrics (CPU/mem/disk) as a DaemonSet.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: observability
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+  template:
+    metadata:
+      labels:
+        app: node-exporter
+    spec:
+      hostNetwork: true
+      hostPID: true
+      containers:
+        - name: node-exporter
+          image: prom/node-exporter:v1.8.2
+          args:
+            - "--path.rootfs=/host"
+          ports:
+            - containerPort: 9100
+              hostPort: 9100
+          volumeMounts:
+            - name: rootfs
+              mountPath: /host
+              readOnly: true
+      volumes:
+        - name: rootfs
+          hostPath:
+            path: /
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-exporter
+  namespace: observability
+  labels:
+    app: node-exporter
+spec:
+  selector:
+    app: node-exporter
+  ports:
+    - port: 9100
+      targetPort: 9100
+</file>
+
+<file path="deploy/k8s/observability/prometheus.yaml">
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/metrics", "services", "endpoints", "pods"]
+    verbs: ["get", "list", "watch"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: observability
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      # App pods that opt in via prometheus.io/scrape annotations.
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+      # Cluster-state metrics (replica counts, HPA behavior).
+      - job_name: 'kube-state-metrics'
+        static_configs:
+          - targets: ['kube-state-metrics.observability:8080']
+      # Node-level metrics.
+      - job_name: 'node-exporter'
+        kubernetes_sd_configs:
+          - role: endpoints
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: node-exporter
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      serviceAccountName: prometheus
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.54.1
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: observability
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
+</file>
+
+<file path="deploy/k8s/system/metrics-server-patch.yaml">
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-server
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: metrics-server
+          args:
+            - --cert-dir=/tmp
+            - --secure-port=10250
+            - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+            - --kubelet-use-node-status-port
+            - --metric-resolution=15s
+            - --kubelet-insecure-tls
+</file>
+
+<file path="deploy/kind-config.yaml">
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+</file>
+
+<file path="order-service/cmd/worker/main.go">
+package main
+
+import (
+	"github.com/toainguyen/ecommerce/order-service/internal/config"
+	"github.com/toainguyen/ecommerce/pkg/observability"
+	"github.com/toainguyen/ecommerce/order-service/internal/repository"
+	wf "github.com/toainguyen/ecommerce/order-service/internal/workflow"
+	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/worker"
+)
+
+// The worker is deployed separately from the API server (its own Deployment) so it
+// can scale independently. It polls the task queue and executes the OrderWorkflow
+// and its activities.
+func main() {
+	cfg := config.Load()
+	log := observability.NewLogger(cfg.LogLevel)
+	log.Info("starting order worker", "task_queue", cfg.TemporalTaskQueue)
+
+	repo, err := repository.NewPostgresRepository(cfg.PostgresDSN, log)
+	if err != nil {
+		log.Error("fatal: postgres unavailable", "error", err)
+		return
+	}
+
+	tc, err := client.Dial(client.Options{
+		HostPort:  cfg.TemporalHostPort,
+		Namespace: cfg.TemporalNamespace,
+	})
+	if err != nil {
+		log.Error("fatal: temporal unavailable", "error", err)
+		return
+	}
+	defer tc.Close()
+	log.Info("connected to temporal", "host", cfg.TemporalHostPort)
+
+	w := worker.New(tc, cfg.TemporalTaskQueue, worker.Options{})
+	w.RegisterWorkflow(wf.OrderWorkflow)
+	w.RegisterActivity(&wf.Activities{Repo: repo})
+
+	if err := w.Run(worker.InterruptCh()); err != nil {
+		log.Error("worker stopped", "error", err)
+	}
+}
+</file>
+
+<file path="order-service/docs/docs.go">
+// Package docs Code generated by swaggo/swag. DO NOT EDIT
+package docs
+
+import "github.com/swaggo/swag"
+
+const docTemplate = `{
+    "schemes": {{ marshal .Schemes }},
+    "swagger": "2.0",
+    "info": {
+        "description": "{{escape .Description}}",
+        "title": "{{.Title}}",
+        "contact": {},
+        "version": "{{.Version}}"
+    },
+    "host": "{{.Host}}",
+    "basePath": "{{.BasePath}}",
+    "paths": {
+        "/api/v1/orders": {
+            "post": {
+                "description": "Starts an OrderWorkflow saga via Temporal; returns 202 Accepted with the pending order",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Create an order",
+                "parameters": [
+                    {
+                        "description": "Order payload",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{id}": {
+            "get": {
+                "description": "Returns the order with the given UUID; reflects the latest Temporal workflow status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Get an order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_toainguyen_ecommerce_order-service_internal_model.Order": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_cents": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "workflow_id": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}`
+
+// SwaggerInfo holds exported Swagger Info so clients can modify it
+var SwaggerInfo = &swag.Spec{
+	Version:          "1.0",
+	Host:             "localhost:8082",
+	BasePath:         "/",
+	Schemes:          []string{},
+	Title:            "Order Service API",
+	Description:      "Order management service; order lifecycle is driven by a Temporal saga workflow.",
+	InfoInstanceName: "swagger",
+	SwaggerTemplate:  docTemplate,
+	LeftDelim:        "{{",
+	RightDelim:       "}}",
+}
+
+func init() {
+	swag.Register(SwaggerInfo.InstanceName(), SwaggerInfo)
+}
+</file>
+
+<file path="order-service/docs/swagger.json">
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Order management service; order lifecycle is driven by a Temporal saga workflow.",
+        "title": "Order Service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8082",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/orders": {
+            "post": {
+                "description": "Starts an OrderWorkflow saga via Temporal; returns 202 Accepted with the pending order",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Create an order",
+                "parameters": [
+                    {
+                        "description": "Order payload",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/orders/{id}": {
+            "get": {
+                "description": "Returns the order with the given UUID; reflects the latest Temporal workflow status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Get an order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_toainguyen_ecommerce_order-service_internal_model.Order": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_cents": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "workflow_id": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
+</file>
+
+<file path="order-service/docs/swagger.yaml">
+basePath: /
+definitions:
+  github_com_toainguyen_ecommerce_order-service_internal_model.Order:
+    properties:
+      created_at:
+        type: string
+      currency:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          type: integer
+        type: array
+      status:
+        type: string
+      total_cents:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      workflow_id:
+        type: string
+    type: object
+host: localhost:8082
+info:
+  contact: {}
+  description: Order management service; order lifecycle is driven by a Temporal saga
+    workflow.
+  title: Order Service API
+  version: "1.0"
+paths:
+  /api/v1/orders:
+    post:
+      consumes:
+      - application/json
+      description: Starts an OrderWorkflow saga via Temporal; returns 202 Accepted
+        with the pending order
+      parameters:
+      - description: Order payload
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create an order
+      tags:
+      - orders
+  /api/v1/orders/{id}:
+    get:
+      description: Returns the order with the given UUID; reflects the latest Temporal
+        workflow status
+      parameters:
+      - description: Order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get an order
+      tags:
+      - orders
+swagger: "2.0"
+</file>
+
+<file path="order-service/internal/config/config.go">
+package config
+
+import "os"
+
+// Config holds runtime configuration for the order service and its Temporal worker.
+type Config struct {
+	HTTPPort    string
+	PostgresDSN string
+
+	TemporalHostPort  string
+	TemporalNamespace string
+	TemporalTaskQueue string
+
+	ServiceName  string
+	OTLPEndpoint string
+	Environment  string
+	LogLevel     string
+}
+
+func Load() Config {
+	return Config{
+		HTTPPort:    getenv("ORDER_HTTP_PORT", "8082"),
+		PostgresDSN: getenv("ORDER_PG_DSN", "host=localhost port=5434 user=order password=order dbname=order_db sslmode=disable"),
+
+		TemporalHostPort:  getenv("TEMPORAL_HOST_PORT", "localhost:7233"),
+		TemporalNamespace: getenv("TEMPORAL_NAMESPACE", "default"),
+		TemporalTaskQueue: getenv("TEMPORAL_TASK_QUEUE", "order-task-queue"),
+
+		ServiceName:  getenv("OTEL_SERVICE_NAME", "order-service"),
+		OTLPEndpoint: getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
+		Environment:  getenv("OTEL_SERVICE_ENVIRONMENT", "local"),
+		LogLevel:     getenv("LOG_LEVEL", "info"),
+	}
+}
+
+func getenv(key, fallback string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return fallback
+}
+</file>
+
+<file path="order-service/internal/migration/migrate.go">
+// Package migration runs versioned schema migrations at service startup using
+// golang-migrate with SQL files embedded into the binary. It replaces gorm
+// AutoMigrate. golang-migrate takes a Postgres advisory lock while running, so
+// it is safe to call from multiple replicas concurrently.
+package migration
+
+import (
+	"database/sql"
+	"embed"
+	"errors"
+	"fmt"
+	"log/slog"
+
+	"github.com/golang-migrate/migrate/v4"
+	pgxmig "github.com/golang-migrate/migrate/v4/database/pgx/v5"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
+	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
+)
+
+//go:embed sql/*.sql
+var files embed.FS
+
+// Run applies all pending up migrations against the given DSN.
+func Run(dsn string, log *slog.Logger) error {
+	src, err := iofs.New(files, "sql")
+	if err != nil {
+		return fmt.Errorf("load embedded migrations: %w", err)
+	}
+
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return fmt.Errorf("open migration db: %w", err)
+	}
+	defer db.Close()
+
+	drv, err := pgxmig.WithInstance(db, &pgxmig.Config{})
+	if err != nil {
+		return fmt.Errorf("init migrate driver: %w", err)
+	}
+
+	m, err := migrate.NewWithInstance("iofs", src, "pgx", drv)
+	if err != nil {
+		return fmt.Errorf("init migrate: %w", err)
+	}
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("apply migrations: %w", err)
+	}
+
+	version, _, _ := m.Version()
+	log.Info("migrations applied (order_db)", "version", version)
+	return nil
+}
+</file>
+
+<file path="order-service/internal/migration/sql/000001_init.down.sql">
+DROP TABLE IF EXISTS orders;
+</file>
+
+<file path="order-service/internal/migration/sql/000001_init.up.sql">
+CREATE TABLE IF NOT EXISTS orders (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     TEXT        NOT NULL,
+    -- Saga state: PENDING -> CONFIRMED | FAILED (mirrors the Temporal workflow).
+    status      TEXT        NOT NULL DEFAULT 'PENDING',
+    total_cents BIGINT      NOT NULL DEFAULT 0,
+    currency    TEXT        NOT NULL DEFAULT 'USD',
+    items       JSONB       NOT NULL DEFAULT '[]'::jsonb,
+    workflow_id TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status  ON orders (status);
+</file>
+
+<file path="order-service/internal/model/order.go">
+package model
+
+import (
+	"time"
+
+	"gorm.io/datatypes"
+)
+
+// Order status values mirror the Temporal saga outcome.
+const (
+	StatusPending   = "PENDING"
+	StatusConfirmed = "CONFIRMED"
+	StatusFailed    = "FAILED"
+)
+
+// OrderItem is a single line in an order.
+type OrderItem struct {
+	ProductID string `json:"product_id"`
+	SKU       string `json:"sku"`
+	Quantity  int    `json:"quantity"`
+	UnitCents int64  `json:"unit_cents"`
+}
+
+// Order is persisted in PostgreSQL; its lifecycle is driven by the OrderWorkflow.
+type Order struct {
+	ID         string         `json:"id" gorm:"type:uuid;primaryKey"`
+	UserID     string         `json:"user_id" gorm:"index;not null"`
+	Status     string         `json:"status" gorm:"index;not null;default:PENDING"`
+	TotalCents int64          `json:"total_cents" gorm:"not null;default:0"`
+	Currency   string         `json:"currency" gorm:"not null;default:USD"`
+	Items      datatypes.JSON `json:"items" gorm:"type:jsonb;not null;default:'[]'"`
+	WorkflowID string         `json:"workflow_id"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+}
+
+func (Order) TableName() string { return "orders" }
+</file>
+
+<file path="order-service/internal/repository/repository.go">
+package repository
+
+import (
+	"context"
+
+	"github.com/toainguyen/ecommerce/order-service/internal/model"
+)
+
+// OrderRepository is the persistence port for orders (Postgres).
+type OrderRepository interface {
+	Create(ctx context.Context, o *model.Order) error
+	GetByID(ctx context.Context, id string) (*model.Order, error)
+	UpdateStatus(ctx context.Context, id, status string) error
+}
+</file>
+
+<file path="order-service/internal/usecase/order_usecase.go">
+package usecase
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/google/uuid"
+	"github.com/toainguyen/ecommerce/order-service/internal/model"
+	"github.com/toainguyen/ecommerce/order-service/internal/repository"
+	"github.com/toainguyen/ecommerce/order-service/internal/workflow"
+	"go.temporal.io/sdk/client"
+)
+
+// OrderUsecase persists orders and kicks off the Temporal saga.
+type OrderUsecase struct {
+	repo      repository.OrderRepository
+	temporal  client.Client
+	taskQueue string
+	log       *slog.Logger
+}
+
+func NewOrderUsecase(repo repository.OrderRepository, tc client.Client, taskQueue string, log *slog.Logger) *OrderUsecase {
+	return &OrderUsecase{repo: repo, temporal: tc, taskQueue: taskQueue, log: log}
+}
+
+// CreateOrder persists a PENDING order, then starts the OrderWorkflow which drives
+// it to CONFIRMED/FAILED. Persistence is the source of truth; Temporal is the orchestrator.
+func (u *OrderUsecase) CreateOrder(ctx context.Context, o *model.Order) (*model.Order, error) {
+	o.ID = uuid.NewString()
+	o.Status = model.StatusPending
+	o.WorkflowID = "order-" + o.ID
+
+	if err := u.repo.Create(ctx, o); err != nil {
+		return nil, err
+	}
+
+	opts := client.StartWorkflowOptions{
+		ID:        o.WorkflowID,
+		TaskQueue: u.taskQueue,
+	}
+	in := workflow.OrderInput{OrderID: o.ID, UserID: o.UserID, TotalCents: o.TotalCents}
+	we, err := u.temporal.ExecuteWorkflow(ctx, opts, workflow.OrderWorkflow, in)
+	if err != nil {
+		u.log.Error("failed to start order workflow", "order_id", o.ID, "error", err)
+		return nil, err
+	}
+	u.log.Info("started order workflow", "order_id", o.ID, "workflow_id", we.GetID(), "run_id", we.GetRunID())
+	return o, nil
+}
+
+func (u *OrderUsecase) GetOrder(ctx context.Context, id string) (*model.Order, error) {
+	return u.repo.GetByID(ctx, id)
+}
+</file>
+
+<file path="order-service/internal/workflow/activities.go">
+package workflow
+
+import (
+	"context"
+
+	"github.com/toainguyen/ecommerce/order-service/internal/model"
+	"github.com/toainguyen/ecommerce/order-service/internal/repository"
+)
+
+// Activities holds the order saga activities. The repo lets terminal-state
+// activities persist the order status. Inventory/payment/shipment are stubs that
+// would call the respective services (Product Service, a payment gateway, etc.).
+type Activities struct {
+	Repo repository.OrderRepository
+}
+
+// ReserveInventory would call the Product Service to decrement stock. Stub: succeeds.
+func (a *Activities) ReserveInventory(ctx context.Context, in OrderInput) error {
+	return nil
+}
+
+// ReleaseInventory is the compensation for ReserveInventory. Stub: succeeds.
+func (a *Activities) ReleaseInventory(ctx context.Context, in OrderInput) error {
+	return nil
+}
+
+// ProcessPayment would call a payment gateway. Stub: succeeds.
+func (a *Activities) ProcessPayment(ctx context.Context, in OrderInput) error {
+	return nil
+}
+
+// RefundPayment is the compensation for ProcessPayment. Stub: succeeds.
+func (a *Activities) RefundPayment(ctx context.Context, in OrderInput) error {
+	return nil
+}
+
+// CreateShipment would call a shipping service. Stub: succeeds.
+func (a *Activities) CreateShipment(ctx context.Context, in OrderInput) error {
+	return nil
+}
+
+// MarkConfirmed persists the terminal CONFIRMED state.
+func (a *Activities) MarkConfirmed(ctx context.Context, in OrderInput) error {
+	if a.Repo == nil {
+		return nil
+	}
+	return a.Repo.UpdateStatus(ctx, in.OrderID, model.StatusConfirmed)
+}
+
+// MarkFailed persists the terminal FAILED state.
+func (a *Activities) MarkFailed(ctx context.Context, in OrderInput) error {
+	if a.Repo == nil {
+		return nil
+	}
+	return a.Repo.UpdateStatus(ctx, in.OrderID, model.StatusFailed)
+}
+</file>
+
+<file path="order-service/internal/workflow/order_saga.go">
+package workflow
+
+import (
+	"time"
+
+	"go.temporal.io/sdk/temporal"
+	"go.temporal.io/sdk/workflow"
+)
+
+// OrderInput is the workflow argument.
+type OrderInput struct {
+	OrderID    string `json:"order_id"`
+	UserID     string `json:"user_id"`
+	TotalCents int64  `json:"total_cents"`
+}
+
+// OrderResult is the workflow return value.
+type OrderResult struct {
+	OrderID string `json:"order_id"`
+	Status  string `json:"status"`
+}
+
+// OrderWorkflow orchestrates the order saga. Each step is an activity; on failure
+// the already-completed steps are compensated in reverse order, then the order is
+// marked FAILED. On success it is marked CONFIRMED.
+func OrderWorkflow(ctx workflow.Context, in OrderInput) (OrderResult, error) {
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 30 * time.Second,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 3,
+		},
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
+	log := workflow.GetLogger(ctx)
+	var a Activities
+
+	// Track compensations to run on failure (LIFO).
+	var compensations []func()
+
+	// 1) Reserve inventory.
+	if err := workflow.ExecuteActivity(ctx, a.ReserveInventory, in).Get(ctx, nil); err != nil {
+		return fail(ctx, in, "reserve inventory failed", err, compensations)
+	}
+	compensations = append(compensations, func() {
+		_ = workflow.ExecuteActivity(ctx, a.ReleaseInventory, in).Get(ctx, nil)
+	})
+
+	// 2) Process payment.
+	if err := workflow.ExecuteActivity(ctx, a.ProcessPayment, in).Get(ctx, nil); err != nil {
+		return fail(ctx, in, "payment failed", err, compensations)
+	}
+	compensations = append(compensations, func() {
+		_ = workflow.ExecuteActivity(ctx, a.RefundPayment, in).Get(ctx, nil)
+	})
+
+	// 3) Create shipment.
+	if err := workflow.ExecuteActivity(ctx, a.CreateShipment, in).Get(ctx, nil); err != nil {
+		return fail(ctx, in, "shipment failed", err, compensations)
+	}
+
+	// 4) Confirm.
+	if err := workflow.ExecuteActivity(ctx, a.MarkConfirmed, in).Get(ctx, nil); err != nil {
+		return OrderResult{OrderID: in.OrderID, Status: "UNKNOWN"}, err
+	}
+	log.Info("order saga completed", "order_id", in.OrderID)
+	return OrderResult{OrderID: in.OrderID, Status: "CONFIRMED"}, nil
+}
+
+// fail runs compensations in reverse, marks the order FAILED, and returns the error.
+func fail(ctx workflow.Context, in OrderInput, msg string, cause error, comps []func()) (OrderResult, error) {
+	log := workflow.GetLogger(ctx)
+	log.Error(msg, "order_id", in.OrderID, "error", cause)
+	for i := len(comps) - 1; i >= 0; i-- {
+		comps[i]()
+	}
+	var a Activities
+	_ = workflow.ExecuteActivity(ctx, a.MarkFailed, in).Get(ctx, nil)
+	return OrderResult{OrderID: in.OrderID, Status: "FAILED"}, cause
+}
+</file>
+
+<file path="pkg/go.mod">
+module github.com/toainguyen/ecommerce/pkg
+
+go 1.26
+
+require (
+	go.opentelemetry.io/otel v1.43.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.31.0
+	go.opentelemetry.io/otel/sdk v1.43.0
+)
+
+require (
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.31.0 // indirect
+	go.opentelemetry.io/otel/metric v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260610212136-7ab31c22f7ad // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad // indirect
+	google.golang.org/grpc v1.81.1 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
+)
+</file>
+
+<file path="product-service/docs/docs.go">
+// Package docs Code generated by swaggo/swag. DO NOT EDIT
+package docs
+
+import "github.com/swaggo/swag"
+
+const docTemplate = `{
+    "schemes": {{ marshal .Schemes }},
+    "swagger": "2.0",
+    "info": {
+        "description": "{{escape .Description}}",
+        "title": "{{.Title}}",
+        "contact": {},
+        "version": "{{.Version}}"
+    },
+    "host": "{{.Host}}",
+    "basePath": "{{.BasePath}}",
+    "paths": {
+        "/api/v1/products": {
+            "post": {
+                "description": "Persists a new product to PostgreSQL and queues it for Elasticsearch indexing",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Create a product",
+                "parameters": [
+                    {
+                        "description": "Product payload",
+                        "name": "product",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/search": {
+            "get": {
+                "description": "Full-text search against Elasticsearch; returns matching products with relevance scores",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Search products",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max results to return (default 10)",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/suggest": {
+            "get": {
+                "description": "Returns product name suggestions for a given prefix using Elasticsearch completion",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Autocomplete suggestions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Prefix to autocomplete",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max suggestions (default 5)",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_toainguyen_ecommerce_product-service_internal_model.Product": {
+            "type": "object",
+            "properties": {
+                "attributes": {
+                    "description": "Attributes stores schema-less product attributes as JSONB (color, size, specs...).",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price_cents": {
+                    "type": "integer"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "stock": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}`
+
+// SwaggerInfo holds exported Swagger Info so clients can modify it
+var SwaggerInfo = &swag.Spec{
+	Version:          "1.0",
+	Host:             "localhost:8080",
+	BasePath:         "/",
+	Schemes:          []string{},
+	Title:            "Product Service API",
+	Description:      "Product catalog service with Elasticsearch-backed search and autocomplete.",
+	InfoInstanceName: "swagger",
+	SwaggerTemplate:  docTemplate,
+	LeftDelim:        "{{",
+	RightDelim:       "}}",
+}
+
+func init() {
+	swag.Register(SwaggerInfo.InstanceName(), SwaggerInfo)
+}
+</file>
+
+<file path="product-service/docs/swagger.json">
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Product catalog service with Elasticsearch-backed search and autocomplete.",
+        "title": "Product Service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/products": {
+            "post": {
+                "description": "Persists a new product to PostgreSQL and queues it for Elasticsearch indexing",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Create a product",
+                "parameters": [
+                    {
+                        "description": "Product payload",
+                        "name": "product",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/search": {
+            "get": {
+                "description": "Full-text search against Elasticsearch; returns matching products with relevance scores",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Search products",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max results to return (default 10)",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/suggest": {
+            "get": {
+                "description": "Returns product name suggestions for a given prefix using Elasticsearch completion",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Autocomplete suggestions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Prefix to autocomplete",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max suggestions (default 5)",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_toainguyen_ecommerce_product-service_internal_model.Product": {
+            "type": "object",
+            "properties": {
+                "attributes": {
+                    "description": "Attributes stores schema-less product attributes as JSONB (color, size, specs...).",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price_cents": {
+                    "type": "integer"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "stock": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
+</file>
+
+<file path="product-service/docs/swagger.yaml">
+basePath: /
+definitions:
+  github_com_toainguyen_ecommerce_product-service_internal_model.Product:
+    properties:
+      attributes:
+        description: Attributes stores schema-less product attributes as JSONB (color,
+          size, specs...).
+        items:
+          type: integer
+        type: array
+      created_at:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      price_cents:
+        type: integer
+      sku:
+        type: string
+      stock:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Product catalog service with Elasticsearch-backed search and autocomplete.
+  title: Product Service API
+  version: "1.0"
+paths:
+  /api/v1/products:
+    post:
+      consumes:
+      - application/json
+      description: Persists a new product to PostgreSQL and queues it for Elasticsearch
+        indexing
+      parameters:
+      - description: Product payload
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a product
+      tags:
+      - products
+  /api/v1/products/search:
+    get:
+      description: Full-text search against Elasticsearch; returns matching products
+        with relevance scores
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Max results to return (default 10)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Search products
+      tags:
+      - products
+  /api/v1/products/suggest:
+    get:
+      description: Returns product name suggestions for a given prefix using Elasticsearch
+        completion
+      parameters:
+      - description: Prefix to autocomplete
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Max suggestions (default 5)
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Autocomplete suggestions
+      tags:
+      - products
+swagger: "2.0"
+</file>
+
+<file path="product-service/internal/config/config.go">
+package config
+
+import (
+	"os"
+)
+
+// Config holds runtime configuration sourced from the environment. In Kubernetes
+// these come from the service ConfigMap/Secret (see deploy/k8s/apps/product-service.yaml).
+type Config struct {
+	HTTPPort    string
+	PostgresDSN string
+	ESAddress   string
+	KafkaBroker string
+
+	ServiceName  string
+	OTLPEndpoint string
+	Environment  string
+	LogLevel     string
+}
+
+// Load reads configuration from environment variables, applying sane defaults
+// for local development.
+func Load() Config {
+	return Config{
+		HTTPPort:    getenv("PRODUCT_HTTP_PORT", "8080"),
+		PostgresDSN: getenv("PRODUCT_PG_DSN", "host=localhost port=5433 user=product password=product dbname=product_db sslmode=disable"),
+		ESAddress:   getenv("PRODUCT_ES_ADDRESS", "http://localhost:9200"),
+		KafkaBroker: getenv("KAFKA_BROKER", "localhost:9092"),
+
+		ServiceName:  getenv("OTEL_SERVICE_NAME", "product-service"),
+		OTLPEndpoint: getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
+		Environment:  getenv("OTEL_SERVICE_ENVIRONMENT", "local"),
+		LogLevel:     getenv("LOG_LEVEL", "info"),
+	}
+}
+
+func getenv(key, fallback string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
+	}
+	return fallback
+}
+</file>
+
+<file path="product-service/internal/migration/migrate.go">
+// Package migration runs versioned schema migrations at service startup using
+// golang-migrate with SQL files embedded into the binary. It replaces gorm
+// AutoMigrate, which cannot express the CDC prerequisites (REPLICA IDENTITY,
+// PUBLICATION) that Debezium needs. golang-migrate takes a Postgres advisory
+// lock while running, so it is safe to call from multiple replicas concurrently.
+package migration
+
+import (
+	"database/sql"
+	"embed"
+	"errors"
+	"fmt"
+	"log/slog"
+
+	"github.com/golang-migrate/migrate/v4"
+	pgxmig "github.com/golang-migrate/migrate/v4/database/pgx/v5"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
+	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
+)
+
+//go:embed sql/*.sql
+var files embed.FS
+
+// Run applies all pending up migrations against the given DSN.
+func Run(dsn string, log *slog.Logger) error {
+	src, err := iofs.New(files, "sql")
+	if err != nil {
+		return fmt.Errorf("load embedded migrations: %w", err)
+	}
+
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return fmt.Errorf("open migration db: %w", err)
+	}
+	defer db.Close()
+
+	drv, err := pgxmig.WithInstance(db, &pgxmig.Config{})
+	if err != nil {
+		return fmt.Errorf("init migrate driver: %w", err)
+	}
+
+	m, err := migrate.NewWithInstance("iofs", src, "pgx", drv)
+	if err != nil {
+		return fmt.Errorf("init migrate: %w", err)
+	}
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("apply migrations: %w", err)
+	}
+
+	version, _, _ := m.Version()
+	log.Info("migrations applied (product_db)", "version", version)
+	return nil
+}
+</file>
+
+<file path="product-service/internal/migration/sql/000001_init.down.sql">
+DROP PUBLICATION IF EXISTS ecommerce_cdc;
+DROP TABLE IF EXISTS products;
+</file>
+
+<file path="product-service/internal/migration/sql/000001_init.up.sql">
+CREATE TABLE IF NOT EXISTS products (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sku         TEXT        NOT NULL UNIQUE,
+    name        TEXT        NOT NULL,
+    description TEXT,
+    price_cents BIGINT      NOT NULL DEFAULT 0,
+    currency    TEXT        NOT NULL DEFAULT 'USD',
+    stock       INT         NOT NULL DEFAULT 0,
+    attributes  JSONB       NOT NULL DEFAULT '{}'::jsonb,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- CDC prerequisites for Debezium (pgoutput). AutoMigrate cannot express these.
+ALTER TABLE products REPLICA IDENTITY FULL;
+DROP PUBLICATION IF EXISTS ecommerce_cdc;
+CREATE PUBLICATION ecommerce_cdc FOR TABLE products;
+</file>
+
+<file path="product-service/internal/model/product.go">
+package model
+
+import (
+	"time"
+
+	"gorm.io/datatypes"
+)
+
+// Product is the catalog entity. It is the source of truth in PostgreSQL; a CDC
+// pipeline (Debezium) projects changes into Elasticsearch for search/suggest.
+type Product struct {
+	ID          string         `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	SKU         string         `json:"sku" gorm:"uniqueIndex;not null"`
+	Name        string         `json:"name" gorm:"not null"`
+	Description string         `json:"description"`
+	PriceCents  int64          `json:"price_cents" gorm:"not null;default:0"`
+	Currency    string         `json:"currency" gorm:"not null;default:USD"`
+	Stock       int            `json:"stock" gorm:"not null;default:0"`
+	// Attributes stores schema-less product attributes as JSONB (color, size, specs...).
+	Attributes datatypes.JSON `json:"attributes" gorm:"type:jsonb;not null;default:'{}'"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+}
+
+// TableName pins the gorm table name to match infra/postgres-product/init.sql.
+func (Product) TableName() string { return "products" }
+
+// SearchResult is a lightweight projection returned by the Elasticsearch read path.
+type SearchResult struct {
+	ID    string  `json:"id"`
+	SKU   string  `json:"sku"`
+	Name  string  `json:"name"`
+	Score float64 `json:"score"`
+}
+</file>
+
+<file path="product-service/internal/repository/repository.go">
+package repository
+
+import (
+	"context"
+
+	"github.com/toainguyen/ecommerce/product-service/internal/model"
+)
+
+// WriteRepository is the persistence port for the catalog source of truth (Postgres).
+type WriteRepository interface {
+	Create(ctx context.Context, p *model.Product) error
+	GetByID(ctx context.Context, id string) (*model.Product, error)
+}
+
+// SearchRepository is the read/search port backed by Elasticsearch. It is kept
+// separate from WriteRepository because the two are populated asynchronously via CDC.
+type SearchRepository interface {
+	Search(ctx context.Context, query string, size int) ([]model.SearchResult, error)
+	Suggest(ctx context.Context, prefix string, size int) ([]string, error)
+}
+</file>
+
+<file path="product-service/internal/usecase/product_usecase.go">
+package usecase
+
+import (
+	"context"
+
+	"github.com/toainguyen/ecommerce/product-service/internal/model"
+	"github.com/toainguyen/ecommerce/product-service/internal/repository"
+)
+
+// ProductUsecase holds business logic and depends only on repository ports.
+type ProductUsecase struct {
+	write  repository.WriteRepository
+	search repository.SearchRepository
+}
+
+func NewProductUsecase(w repository.WriteRepository, s repository.SearchRepository) *ProductUsecase {
+	return &ProductUsecase{write: w, search: s}
+}
+
+// CreateProduct persists a product to the source of truth (Postgres). The CDC
+// pipeline asynchronously projects it into Elasticsearch — no dual write here.
+func (u *ProductUsecase) CreateProduct(ctx context.Context, p *model.Product) error {
+	return u.write.Create(ctx, p)
+}
+
+func (u *ProductUsecase) Search(ctx context.Context, query string, size int) ([]model.SearchResult, error) {
+	if size <= 0 {
+		size = 10
+	}
+	return u.search.Search(ctx, query, size)
+}
+
+func (u *ProductUsecase) Suggest(ctx context.Context, prefix string, size int) ([]string, error) {
+	if size <= 0 {
+		size = 5
+	}
+	return u.search.Suggest(ctx, prefix, size)
+}
+</file>
+
+<file path="cart-service/cmd/server/main.go">
+// @title           Cart Service API
+// @version         1.0
+// @description     Shopping cart service backed by MongoDB.
+// @host            localhost:8081
+// @BasePath        /
+package main
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/toainguyen/ecommerce/cart-service/internal/config"
+	delivery "github.com/toainguyen/ecommerce/cart-service/internal/delivery/http"
+	_ "github.com/toainguyen/ecommerce/cart-service/docs"
+	"github.com/toainguyen/ecommerce/cart-service/internal/repository"
+	"github.com/toainguyen/ecommerce/cart-service/internal/usecase"
+	"github.com/toainguyen/ecommerce/pkg/observability"
+)
+
+func main() {
+	cfg := config.Load()
+	log := observability.NewLogger(cfg.LogLevel)
+	log.Info("starting cart-service", "port", cfg.HTTPPort)
+
+	ctx := context.Background()
+	shutdownTracing, err := observability.InitTracing(ctx, cfg.ServiceName, cfg.OTLPEndpoint, cfg.Environment)
+	if err != nil {
+		log.Warn("tracing init failed (continuing without traces)", "error", err)
+		shutdownTracing = func(context.Context) error { return nil }
+	}
+
+	repo, err := repository.NewMongoRepository(cfg.MongoURI, cfg.MongoDB, log)
+	if err != nil {
+		log.Error("fatal: mongodb unavailable", "error", err)
+		os.Exit(1)
+	}
+
+	uc := usecase.NewCartUsecase(repo)
+	handler := delivery.NewCartHandler(uc, log)
+	srv := &http.Server{
+		Addr:              ":" + cfg.HTTPPort,
+		Handler:           delivery.NewRouter(handler),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("http server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+	log.Info("cart-service listening", "addr", srv.Addr)
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+	log.Info("shutting down cart-service")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = srv.Shutdown(shutdownCtx)
+	_ = shutdownTracing(shutdownCtx)
+}
+</file>
+
+<file path="cart-service/Dockerfile">
+# Build context is the REPO ROOT (see Makefile: docker build -f cart-service/Dockerfile .)
+# so the shared ../pkg module referenced via `replace` is available.
+# ---- build ----
+FROM golang:1.26-alpine AS build
+WORKDIR /src
+COPY pkg/go.mod pkg/go.sum* ./pkg/
+COPY cart-service/go.mod cart-service/go.sum* ./cart-service/
+RUN cd cart-service && go mod download
+COPY pkg/ ./pkg/
+COPY cart-service/ ./cart-service/
+RUN cd cart-service && CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+
+# ---- runtime ----
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/server /server
+EXPOSE 8081
+USER nonroot:nonroot
+ENTRYPOINT ["/server"]
+</file>
+
+<file path="cart-service/go.mod">
+module github.com/toainguyen/ecommerce/cart-service
+
+go 1.26
+
+require (
+	github.com/go-chi/chi/v5 v5.1.0
+	github.com/prometheus/client_golang v1.20.5
+	github.com/swaggo/http-swagger v1.3.4
+	github.com/swaggo/swag v1.16.6
+	github.com/toainguyen/ecommerce/pkg v0.0.0
+	go.mongodb.org/mongo-driver v1.16.1
+)
+
+replace github.com/toainguyen/ecommerce/pkg => ../pkg
+
+require (
+	github.com/KyleBanks/depth v1.2.1 // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-openapi/jsonpointer v0.19.5 // indirect
+	github.com/go-openapi/jsonreference v0.20.0 // indirect
+	github.com/go-openapi/spec v0.20.6 // indirect
+	github.com/go-openapi/swag v0.19.15 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+	github.com/josharian/intern v1.0.0 // indirect
+	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/montanaflynn/stats v0.7.1 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/prometheus/client_model v0.6.2 // indirect
+	github.com/prometheus/common v0.55.0 // indirect
+	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/swaggo/files v1.0.1 // indirect
+	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
+	github.com/xdg-go/scram v1.1.2 // indirect
+	github.com/xdg-go/stringprep v1.0.4 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
+	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/otel v1.43.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.31.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.31.0 // indirect
+	go.opentelemetry.io/otel/metric v1.43.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260610212136-7ab31c22f7ad // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad // indirect
+	google.golang.org/grpc v1.81.1 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+)
+</file>
+
+<file path="cart-service/internal/delivery/http/cart_handler.go">
+package http
+
+import (
+	"encoding/json"
+	"log/slog"
+	"net/http"
+
+	"github.com/toainguyen/ecommerce/cart-service/internal/model"
+	"github.com/toainguyen/ecommerce/cart-service/internal/usecase"
+)
+
+// CartHandler adapts HTTP to the cart usecase.
+type CartHandler struct {
+	uc  *usecase.CartUsecase
+	log *slog.Logger
+}
+
+func NewCartHandler(uc *usecase.CartUsecase, log *slog.Logger) *CartHandler {
+	return &CartHandler{uc: uc, log: log}
+}
+
+// userID resolves the cart owner from the X-User-ID header (auth is out of scope).
+func userID(r *http.Request) string {
+	if id := r.Header.Get("X-User-ID"); id != "" {
+		return id
+	}
+	return "anonymous"
+}
+
+// Upsert godoc
+// @Summary      Upsert cart
+// @Description  Creates or replaces the cart for the user identified by the X-User-ID header
+// @Tags         carts
+// @Accept       json
+// @Produce      json
+// @Param        X-User-ID  header    string      false  "User identifier (falls back to 'anonymous')"
+// @Param        cart       body      model.Cart  true   "Cart payload"
+// @Success      200        {object}  model.Cart
+// @Failure      400        {object}  map[string]string
+// @Failure      500        {object}  map[string]string
+// @Router       /api/v1/carts [put]
+func (h *CartHandler) Upsert(w http.ResponseWriter, r *http.Request) {
+	var cart model.Cart
+	if err := json.NewDecoder(r.Body).Decode(&cart); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	cart.UserID = userID(r)
+	if err := h.uc.SaveCart(r.Context(), &cart); err != nil {
+		h.log.Error("save cart failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "could not save cart")
+		return
+	}
+	writeJSON(w, http.StatusOK, cart)
+}
+
+// Get godoc
+// @Summary      Get cart
+// @Description  Returns the current cart for the user identified by the X-User-ID header
+// @Tags         carts
+// @Produce      json
+// @Param        X-User-ID  header    string  false  "User identifier (falls back to 'anonymous')"
+// @Success      200        {object}  model.Cart
+// @Failure      500        {object}  map[string]string
+// @Router       /api/v1/carts [get]
+func (h *CartHandler) Get(w http.ResponseWriter, r *http.Request) {
+	cart, err := h.uc.GetCart(r.Context(), userID(r))
+	if err != nil {
+		h.log.Error("get cart failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "could not fetch cart")
+		return
+	}
+	writeJSON(w, http.StatusOK, cart)
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, map[string]string{"error": msg})
+}
+</file>
+
+<file path="cart-service/internal/delivery/http/router.go">
+package http
+
+import (
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	httpSwagger "github.com/swaggo/http-swagger"
+)
+
+// NewRouter wires middleware, health/metrics endpoints, and the cart routes.
+func NewRouter(h *CartHandler) http.Handler {
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Recoverer)
+
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
+	r.Get("/readyz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ready")) })
+	r.Handle("/metrics", promhttp.Handler())
+
+	// Swagger UI.
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
+
+	r.Route("/api/v1/carts", func(r chi.Router) {
+		r.Put("/", h.Upsert)
+		r.Get("/", h.Get)
+	})
+
+	return r
+}
+</file>
+
+<file path="deploy/k8s/infra/kafka-connect.yaml">
+# Kafka Connect with Debezium connectors (the CDC source) + Confluent ES sink.
+# Register the Postgres source post-boot:  make register-connector
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-connect
+  namespace: ecommerce
+spec:
+  selector:
+    app: kafka-connect
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-connect
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-connect
+  template:
+    metadata:
+      labels:
+        app: kafka-connect
+    spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z kafka 9092; do echo waiting for kafka; sleep 3; done"]
+      containers:
+        - name: connect
+          # Debezium's Connect image ships the Postgres source connector.
+          image: debezium/connect:2.7.3.Final
+          env:
+            - name: BOOTSTRAP_SERVERS
+              value: "kafka:9092"
+            - name: GROUP_ID
+              value: "ecommerce-connect"
+            - name: CONFIG_STORAGE_TOPIC
+              value: "connect_configs"
+            - name: OFFSET_STORAGE_TOPIC
+              value: "connect_offsets"
+            - name: STATUS_STORAGE_TOPIC
+              value: "connect_statuses"
+            - name: CONFIG_STORAGE_REPLICATION_FACTOR
+              value: "1"
+            - name: OFFSET_STORAGE_REPLICATION_FACTOR
+              value: "1"
+            - name: STATUS_STORAGE_REPLICATION_FACTOR
+              value: "1"
+          ports:
+            - containerPort: 8083
+          readinessProbe:
+            httpGet:
+              path: /connectors
+              port: 8083
+            initialDelaySeconds: 20
+            periodSeconds: 15
+</file>
+
+<file path="deploy/k8s/infra/kafka.yaml">
+# Zookeeper + Kafka (Confluent images) — the transport for the CDC pipeline.
+# NOTE: Kafka KRaft mode can replace Zookeeper; Zookeeper is used here to match
+# the classic Debezium tutorial topology.
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper
+  namespace: ecommerce
+spec:
+  selector:
+    app: zookeeper
+  ports:
+    - port: 2181
+      targetPort: 2181
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zookeeper
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zookeeper
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      containers:
+        - name: zookeeper
+          image: confluentinc/cp-zookeeper:7.6.1
+          env:
+            - name: ZOOKEEPER_CLIENT_PORT
+              value: "2181"
+            - name: ZOOKEEPER_TICK_TIME
+              value: "2000"
+          ports:
+            - containerPort: 2181
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: ecommerce
+spec:
+  selector:
+    app: kafka
+  ports:
+    - port: 9092
+      targetPort: 9092
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      enableServiceLinks: false
+      initContainers:
+        - name: wait-for-zookeeper
+          image: busybox:1.36
+          command: ["sh", "-c", "until nc -z zookeeper 2181; do echo waiting for zookeeper; sleep 2; done"]
+      containers:
+        - name: kafka
+          image: confluentinc/cp-kafka:7.6.1
+          env:
+            - name: KAFKA_BROKER_ID
+              value: "1"
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: "zookeeper:2181"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka:9092"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
+              value: "0"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+          ports:
+            - containerPort: 9092
+</file>
+
+<file path="deploy/k8s/infra/postgres-product.yaml">
+# PostgreSQL for the Product Service. Started with wal_level=logical so Debezium
+# can stream WAL changes (CDC) into Kafka -> Elasticsearch. Schema and the CDC
+# publication are created by the product-service golang-migrate migrations at startup.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-product
+  namespace: ecommerce
+spec:
+  clusterIP: None
+  selector:
+    app: postgres-product
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-product
+  namespace: ecommerce
+spec:
+  serviceName: postgres-product
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-product
+  template:
+    metadata:
+      labels:
+        app: postgres-product
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          # Logical replication settings required for CDC.
+          args:
+            - "-c"
+            - "wal_level=logical"
+            - "-c"
+            - "max_wal_senders=10"
+            - "-c"
+            - "max_replication_slots=10"
+          env:
+            - name: POSTGRES_USER
+              value: product
+            - name: POSTGRES_PASSWORD
+              value: product
+            - name: POSTGRES_DB
+              value: product_db
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "product"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+</file>
+
+<file path="deploy/k8s/infra/temporal.yaml">
+# Temporal cluster (workflow engine for the Order saga): its own Postgres +
+# auto-setup server + Web UI.
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-postgresql
+  namespace: ecommerce
+spec:
+  clusterIP: None
+  selector:
+    app: temporal-postgresql
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: temporal-postgresql
+  namespace: ecommerce
+spec:
+  serviceName: temporal-postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-postgresql
+  template:
+    metadata:
+      labels:
+        app: temporal-postgresql
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          env:
+            - name: POSTGRES_USER
+              value: temporal
+            - name: POSTGRES_PASSWORD
+              value: temporal
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal
+  namespace: ecommerce
+spec:
+  selector:
+    app: temporal
+  ports:
+    - name: grpc
+      port: 7233
+      targetPort: 7233
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal
+  template:
+    metadata:
+      labels:
+        app: temporal
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: temporal
+          image: temporalio/auto-setup:1.25.2
+          env:
+            - name: DB
+              value: postgres12
+            - name: DB_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: temporal
+            - name: POSTGRES_PWD
+              value: temporal
+            - name: POSTGRES_SEEDS
+              value: temporal-postgresql
+          ports:
+            - containerPort: 7233
+          readinessProbe:
+            tcpSocket:
+              port: 7233
+            initialDelaySeconds: 20
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-ui
+  namespace: ecommerce
+spec:
+  selector:
+    app: temporal-ui
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-ui
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-ui
+  template:
+    metadata:
+      labels:
+        app: temporal-ui
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: temporal-ui
+          image: temporalio/ui:2.31.2
+          env:
+            - name: TEMPORAL_ADDRESS
+              value: temporal:7233
+            - name: TEMPORAL_CORS_ORIGINS
+              value: http://localhost:3000
+          ports:
+            - containerPort: 8080
+</file>
+
+<file path="deploy/k8s/observability/grafana.yaml">
+# Grafana with Prometheus, Loki, and Jaeger datasources pre-provisioned.
+# Default login admin/admin. UI on :3000 (port-forward: make pf-grafana).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: observability
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki:3100
+      - name: Jaeger
+        type: jaeger
+        access: proxy
+        url: http://jaeger:16686
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-provider
+  namespace: observability
+data:
+  provider.yaml: |
+    apiVersion: 1
+    providers:
+      - name: default
+        folder: ecommerce
+        type: file
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-scaling
+  namespace: observability
+data:
+  scaling.json: |
+    {
+      "title": "E-commerce / Scaling Overview",
+      "uid": "ecom-scaling",
+      "schemaVersion": 39,
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Deployment replicas (ready)",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "targets": [
+            {"expr": "kube_deployment_status_replicas_ready{namespace=\"ecommerce\"}", "legendFormat": "{{deployment}}"}
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "HPA desired vs current replicas",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "targets": [
+            {"expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"ecommerce\"}", "legendFormat": "{{horizontalpodautoscaler}} desired"},
+            {"expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"ecommerce\"}", "legendFormat": "{{horizontalpodautoscaler}} current"}
+          ]
+        }
+      ]
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.2.0
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: admin
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: admin
+            - name: GF_SERVER_ROOT_URL
+              value: http://localhost/grafana
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: "true"
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboards-provider
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+        - name: dashboards-provider
+          configMap:
+            name: grafana-dashboards-provider
+        - name: dashboards
+          configMap:
+            name: grafana-dashboard-scaling
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  selector:
+    app: grafana
+  ports:
+    - port: 3000
+      targetPort: 3000
+</file>
+
+<file path="deploy/k8s/observability/jaeger.yaml">
+# Jaeger all-in-one with the OTLP receiver enabled. Services export traces to
+# http://jaeger.observability:4318 (OTLP/HTTP). UI on :16686.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:1.60
+          env:
+            - name: COLLECTOR_OTLP_ENABLED
+              value: "true"
+          args:
+            - --query.base-path=/jaeger
+          ports:
+            - containerPort: 16686  # UI
+            - containerPort: 4317   # OTLP gRPC
+            - containerPort: 4318   # OTLP HTTP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: observability
+spec:
+  selector:
+    app: jaeger
+  ports:
+    - name: ui
+      port: 16686
+      targetPort: 16686
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+</file>
+
+<file path="deploy/k8s/observability/promtail.yaml">
+# Promtail: ships container logs from every node to Loki (DaemonSet).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: promtail
+  namespace: observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: promtail
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: promtail
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: promtail
+subjects:
+  - kind: ServiceAccount
+    name: promtail
+    namespace: observability
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  namespace: observability
+data:
+  promtail.yaml: |
+    server:
+      http_listen_port: 9080
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+    positions:
+      filename: /run/promtail/positions.yaml
+    scrape_configs:
+      - job_name: kubernetes-pods
+        static_configs:
+          - targets: [localhost]
+            labels:
+              job: kubernetes-pods
+              __path__: /var/log/pods/*/*/*.log
+        pipeline_stages:
+          - regex:
+              source: filename
+              expression: '^/var/log/pods/(?P<namespace>[^_]+)_(?P<pod>[^_]+)_[^/]+/(?P<container>[^/]+)/[^/]+$'
+          - labels:
+              namespace:
+              pod:
+              container:
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: observability
+spec:
+  selector:
+    matchLabels:
+      app: promtail
+  template:
+    metadata:
+      labels:
+        app: promtail
+    spec:
+      serviceAccountName: promtail
+      containers:
+        - name: promtail
+          image: grafana/promtail:3.1.1
+          args: ["-config.file=/etc/promtail/promtail.yaml"]
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: config
+              mountPath: /etc/promtail
+            - name: pods
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: run
+              mountPath: /run/promtail
+      volumes:
+        - name: config
+          configMap:
+            name: promtail-config
+        - name: pods
+          hostPath:
+            path: /var/log/pods
+        - name: run
+          emptyDir: {}
+</file>
+
+<file path="order-service/Dockerfile">
+# Build context is the REPO ROOT (see Makefile: docker build -f order-service/Dockerfile .)
+# so the shared ../pkg module referenced via `replace` is available.
+# Builds both the API server and the Temporal worker; the k8s worker Deployment
+# overrides the entrypoint to /worker (see deploy/k8s/apps/order-service.yaml).
+# ---- build ----
+FROM golang:1.26-alpine AS build
+WORKDIR /src
+COPY pkg/go.mod pkg/go.sum* ./pkg/
+COPY order-service/go.mod order-service/go.sum* ./order-service/
+RUN cd order-service && go mod download
+COPY pkg/ ./pkg/
+COPY order-service/ ./order-service/
+RUN cd order-service && \
+    CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server && \
+    CGO_ENABLED=0 GOOS=linux go build -o /out/worker ./cmd/worker
+
+# ---- runtime ----
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/server /server
+COPY --from=build /out/worker /worker
+EXPOSE 8082
+USER nonroot:nonroot
+ENTRYPOINT ["/server"]
+</file>
+
+<file path="order-service/internal/delivery/http/order_handler.go">
+package http
+
+import (
+	"encoding/json"
+	"log/slog"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/toainguyen/ecommerce/order-service/internal/model"
+	"github.com/toainguyen/ecommerce/order-service/internal/usecase"
+)
+
+// OrderHandler adapts HTTP to the order usecase.
+type OrderHandler struct {
+	uc  *usecase.OrderUsecase
+	log *slog.Logger
+}
+
+func NewOrderHandler(uc *usecase.OrderUsecase, log *slog.Logger) *OrderHandler {
+	return &OrderHandler{uc: uc, log: log}
+}
+
+// Create godoc
+// @Summary      Create an order
+// @Description  Starts an OrderWorkflow saga via Temporal; returns 202 Accepted with the pending order
+// @Tags         orders
+// @Accept       json
+// @Produce      json
+// @Param        order  body      model.Order  true  "Order payload"
+// @Success      202    {object}  model.Order
+// @Failure      400    {object}  map[string]string
+// @Failure      500    {object}  map[string]string
+// @Router       /api/v1/orders [post]
+func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var o model.Order
+	if err := json.NewDecoder(r.Body).Decode(&o); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	created, err := h.uc.CreateOrder(r.Context(), &o)
+	if err != nil {
+		h.log.Error("create order failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "could not create order")
+		return
+	}
+	writeJSON(w, http.StatusAccepted, created)
+}
+
+// Get godoc
+// @Summary      Get an order
+// @Description  Returns the order with the given UUID; reflects the latest Temporal workflow status
+// @Tags         orders
+// @Produce      json
+// @Param        id   path      string  true  "Order UUID"
+// @Success      200  {object}  model.Order
+// @Failure      404  {object}  map[string]string
+// @Router       /api/v1/orders/{id} [get]
+func (h *OrderHandler) Get(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	order, err := h.uc.GetOrder(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "order not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, order)
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, map[string]string{"error": msg})
+}
+</file>
+
+<file path="order-service/internal/delivery/http/router.go">
+package http
+
+import (
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	httpSwagger "github.com/swaggo/http-swagger"
+)
+
+// NewRouter wires middleware, health/metrics endpoints, and the order routes.
+func NewRouter(h *OrderHandler) http.Handler {
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Recoverer)
+
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
+	r.Get("/readyz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ready")) })
+	r.Handle("/metrics", promhttp.Handler())
+
+	// Swagger UI.
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
+
+	r.Route("/api/v1/orders", func(r chi.Router) {
+		r.Post("/", h.Create)
+		r.Get("/{id}", h.Get)
+	})
+
+	return r
+}
+</file>
+
+<file path="order-service/internal/repository/postgres_repo.go">
+package repository
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/toainguyen/ecommerce/order-service/internal/model"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
+
+// PostgresRepository implements OrderRepository using gorm.
+type PostgresRepository struct {
+	db  *gorm.DB
+	log *slog.Logger
+}
+
+// NewPostgresRepository opens a gorm connection and logs the result. Schema is
+// managed by the migration package (golang-migrate), not gorm AutoMigrate.
+func NewPostgresRepository(dsn string, log *slog.Logger) (*PostgresRepository, error) {
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Error("postgres connection failed", "error", err)
+		return nil, err
+	}
+	log.Info("connected to postgres (order_db)")
+
+	return &PostgresRepository{db: db, log: log}, nil
+}
+
+func (r *PostgresRepository) Create(ctx context.Context, o *model.Order) error {
+	return r.db.WithContext(ctx).Create(o).Error
+}
+
+func (r *PostgresRepository) GetByID(ctx context.Context, id string) (*model.Order, error) {
+	var o model.Order
+	if err := r.db.WithContext(ctx).First(&o, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &o, nil
+}
+
+func (r *PostgresRepository) UpdateStatus(ctx context.Context, id, status string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Order{}).
+		Where("id = ?", id).
+		Update("status", status).Error
+}
+</file>
+
+<file path="pkg/observability/observability.go">
+// Package observability provides shared structured logging (slog) and
+// OpenTelemetry tracing bootstrap used by every service. Traces are exported over
+// OTLP/HTTP to the collector (Jaeger) configured in deploy/k8s/observability.
+package observability
+
+import (
+	"context"
+	"log/slog"
+	"os"
+	"strings"
+	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+)
+
+// NewLogger returns a JSON slog logger so Promtail/Loki can parse fields cleanly.
+func NewLogger(level string) *slog.Logger {
+	var lvl slog.Level
+	switch strings.ToLower(level) {
+	case "debug":
+		lvl = slog.LevelDebug
+	case "warn":
+		lvl = slog.LevelWarn
+	case "error":
+		lvl = slog.LevelError
+	default:
+		lvl = slog.LevelInfo
+	}
+	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: lvl}))
+}
+
+// InitTracing configures a global OTLP/HTTP trace exporter and returns a shutdown
+// function. If the collector is unreachable the app still runs — spans are simply
+// dropped — so local development without the observability stack keeps working.
+func InitTracing(ctx context.Context, serviceName, endpoint, environment string) (func(context.Context) error, error) {
+	exp, err := otlptracehttp.New(ctx,
+		otlptracehttp.WithEndpointURL(endpoint+"/v1/traces"),
+		otlptracehttp.WithInsecure(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := resource.Merge(resource.Default(), resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName(serviceName),
+		semconv.DeploymentEnvironmentName(environment),
+	))
+	if err != nil {
+		return nil, err
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp, sdktrace.WithBatchTimeout(5*time.Second)),
+		sdktrace.WithResource(res),
+	)
+	otel.SetTracerProvider(tp)
+
+	return tp.Shutdown, nil
+}
+</file>
+
+<file path="product-service/Dockerfile">
+# Build context is the REPO ROOT (see Makefile: docker build -f product-service/Dockerfile .)
+# so the shared ../pkg module referenced via `replace` is available.
+# ---- build ----
+FROM golang:1.26-alpine AS build
+WORKDIR /src
+# Module manifests first for better layer caching.
+COPY pkg/go.mod pkg/go.sum* ./pkg/
+COPY product-service/go.mod product-service/go.sum* ./product-service/
+RUN cd product-service && go mod download
+# Sources.
+COPY pkg/ ./pkg/
+COPY product-service/ ./product-service/
+RUN cd product-service && CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
+
+# ---- runtime ----
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/server /server
+EXPOSE 8080
+USER nonroot:nonroot
+ENTRYPOINT ["/server"]
+</file>
+
+<file path="product-service/internal/delivery/http/product_handler.go">
+package http
+
+import (
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"strconv"
+
+	"github.com/toainguyen/ecommerce/product-service/internal/model"
+	"github.com/toainguyen/ecommerce/product-service/internal/usecase"
+)
+
+// ProductHandler adapts HTTP requests to the usecase layer.
+type ProductHandler struct {
+	uc  *usecase.ProductUsecase
+	log *slog.Logger
+}
+
+func NewProductHandler(uc *usecase.ProductUsecase, log *slog.Logger) *ProductHandler {
+	return &ProductHandler{uc: uc, log: log}
+}
+
+// Create godoc
+// @Summary      Create a product
+// @Description  Persists a new product to PostgreSQL and queues it for Elasticsearch indexing
+// @Tags         products
+// @Accept       json
+// @Produce      json
+// @Param        product  body      model.Product  true  "Product payload"
+// @Success      201      {object}  model.Product
+// @Failure      400      {object}  map[string]string
+// @Failure      500      {object}  map[string]string
+// @Router       /api/v1/products [post]
+func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var p model.Product
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.uc.CreateProduct(r.Context(), &p); err != nil {
+		h.log.Error("create product failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "could not create product")
+		return
+	}
+	writeJSON(w, http.StatusCreated, p)
+}
+
+// Search godoc
+// @Summary      Search products
+// @Description  Full-text search against Elasticsearch; returns matching products with relevance scores
+// @Tags         products
+// @Produce      json
+// @Param        q     query  string  true   "Search query"
+// @Param        size  query  int     false  "Max results to return (default 10)"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      500   {object}  map[string]string
+// @Router       /api/v1/products/search [get]
+func (h *ProductHandler) Search(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	results, err := h.uc.Search(r.Context(), q, size)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "search failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"query": q, "results": results})
+}
+
+// Suggest godoc
+// @Summary      Autocomplete suggestions
+// @Description  Returns product name suggestions for a given prefix using Elasticsearch completion
+// @Tags         products
+// @Produce      json
+// @Param        q     query  string  true   "Prefix to autocomplete"
+// @Param        size  query  int     false  "Max suggestions (default 5)"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      500   {object}  map[string]string
+// @Router       /api/v1/products/suggest [get]
+func (h *ProductHandler) Suggest(w http.ResponseWriter, r *http.Request) {
+	prefix := r.URL.Query().Get("q")
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	suggestions, err := h.uc.Suggest(r.Context(), prefix, size)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "suggest failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"prefix": prefix, "suggestions": suggestions})
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, map[string]string{"error": msg})
+}
+</file>
+
+<file path="product-service/internal/delivery/http/router.go">
+package http
+
+import (
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	httpSwagger "github.com/swaggo/http-swagger"
+)
+
+// NewRouter wires middleware, health/metrics endpoints, and the product routes.
+func NewRouter(h *ProductHandler) http.Handler {
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Recoverer)
+
+	// Operational endpoints.
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ok")) })
+	r.Get("/readyz", func(w http.ResponseWriter, _ *http.Request) { w.Write([]byte("ready")) })
+	r.Handle("/metrics", promhttp.Handler())
+
+	// Swagger UI.
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
+
+	// Product API.
+	r.Route("/api/v1/products", func(r chi.Router) {
+		r.Post("/", h.Create)
+		r.Get("/search", h.Search)
+		r.Get("/suggest", h.Suggest)
+	})
+
+	return r
+}
+</file>
+
+<file path="product-service/internal/repository/elastic_repo.go">
+package repository
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"strings"
+
+	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/toainguyen/ecommerce/product-service/internal/model"
+)
+
+const esIndex = "products"
+
+// indexMapping defines the products index with full-text + completion fields.
+var indexMapping = `{
+  "mappings": {
+    "properties": {
+      "id":          { "type": "keyword" },
+      "sku":         { "type": "keyword" },
+      "name": {
+        "type": "text", "analyzer": "standard",
+        "fields": { "suggest": { "type": "completion" } }
+      },
+      "description": { "type": "text", "analyzer": "standard" },
+      "price_cents": { "type": "long" },
+      "currency":    { "type": "keyword" },
+      "stock":       { "type": "integer" }
+    }
+  }
+}`
+
+// ElasticRepository implements SearchRepository against Elasticsearch.
+type ElasticRepository struct {
+	es  *elasticsearch.Client
+	log *slog.Logger
+}
+
+// NewElasticRepository builds an ES client and pings the cluster.
+func NewElasticRepository(address string, log *slog.Logger) (*ElasticRepository, error) {
+	es, err := elasticsearch.NewClient(elasticsearch.Config{
+		Addresses: []string{address},
+	})
+	if err != nil {
+		log.Error("elasticsearch client init failed", "error", err)
+		return nil, err
+	}
+	if res, err := es.Info(); err != nil {
+		log.Warn("elasticsearch ping failed (will retry on use)", "error", err)
+	} else {
+		_ = res.Body.Close()
+		log.Info("connected to elasticsearch", "address", address)
+	}
+	return &ElasticRepository{es: es, log: log}, nil
+}
+
+// Client exposes the underlying ES client for use by the Kafka consumer.
+func (r *ElasticRepository) Client() *elasticsearch.Client {
+	return r.es
+}
+
+// EnsureIndex creates the products index with mapping if it does not exist.
+func (r *ElasticRepository) EnsureIndex(ctx context.Context) error {
+	res, err := r.es.Indices.Exists([]string{esIndex}, r.es.Indices.Exists.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("es check index: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusOK {
+		r.log.Info("elasticsearch index already exists", "index", esIndex)
+		return nil
+	}
+
+	createRes, err := r.es.Indices.Create(esIndex,
+		r.es.Indices.Create.WithBody(strings.NewReader(indexMapping)),
+		r.es.Indices.Create.WithContext(ctx),
+	)
+	if err != nil {
+		return fmt.Errorf("es create index: %w", err)
+	}
+	defer createRes.Body.Close()
+	if createRes.IsError() {
+		return fmt.Errorf("es create index error: %s", createRes.String())
+	}
+	r.log.Info("elasticsearch index created", "index", esIndex)
+	return nil
+}
+
+// Search runs a multi_match full-text query against name and description.
+func (r *ElasticRepository) Search(ctx context.Context, query string, size int) ([]model.SearchResult, error) {
+	body := fmt.Sprintf(`{
+		"size": %d,
+		"query": {
+			"multi_match": {
+				"query": %q,
+				"fields": ["name^3", "description"]
+			}
+		}
+	}`, size, query)
+
+	res, err := r.es.Search(
+		r.es.Search.WithIndex(esIndex),
+		r.es.Search.WithBody(strings.NewReader(body)),
+		r.es.Search.WithContext(ctx),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("es search: %w", err)
+	}
+	defer res.Body.Close()
+	if res.IsError() {
+		return nil, fmt.Errorf("es search error: %s", res.String())
+	}
+
+	var raw struct {
+		Hits struct {
+			Hits []struct {
+				ID     string          `json:"_id"`
+				Score  float64         `json:"_score"`
+				Source json.RawMessage `json:"_source"`
+			} `json:"hits"`
+		} `json:"hits"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("decode search response: %w", err)
+	}
+
+	results := make([]model.SearchResult, 0, len(raw.Hits.Hits))
+	for _, hit := range raw.Hits.Hits {
+		var src struct {
+			SKU  string `json:"sku"`
+			Name string `json:"name"`
+		}
+		_ = json.Unmarshal(hit.Source, &src)
+		results = append(results, model.SearchResult{
+			ID:    hit.ID,
+			SKU:   src.SKU,
+			Name:  src.Name,
+			Score: hit.Score,
+		})
+	}
+	return results, nil
+}
+
+// Suggest runs a completion suggester for autocomplete on product names.
+func (r *ElasticRepository) Suggest(ctx context.Context, prefix string, size int) ([]string, error) {
+	body := fmt.Sprintf(`{
+		"suggest": {
+			"name-suggest": {
+				"prefix": %q,
+				"completion": { "field": "name.suggest", "size": %d }
+			}
+		}
+	}`, prefix, size)
+
+	res, err := r.es.Search(
+		r.es.Search.WithIndex(esIndex),
+		r.es.Search.WithBody(strings.NewReader(body)),
+		r.es.Search.WithContext(ctx),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("es suggest: %w", err)
+	}
+	defer res.Body.Close()
+	if res.IsError() {
+		return nil, fmt.Errorf("es suggest error: %s", res.String())
+	}
+
+	var raw struct {
+		Suggest map[string][]struct {
+			Options []struct {
+				Text string `json:"text"`
+			} `json:"options"`
+		} `json:"suggest"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("decode suggest response: %w", err)
+	}
+
+	var suggestions []string
+	for _, entry := range raw.Suggest["name-suggest"] {
+		for _, opt := range entry.Options {
+			suggestions = append(suggestions, opt.Text)
+		}
+	}
+
+	return suggestions, nil
+}
+</file>
+
+<file path="product-service/internal/repository/postgres_repo.go">
+package repository
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/toainguyen/ecommerce/product-service/internal/model"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
+
+// PostgresRepository implements WriteRepository using gorm.
+type PostgresRepository struct {
+	db  *gorm.DB
+	log *slog.Logger
+}
+
+// NewPostgresRepository opens a gorm connection and logs the result. Schema is
+// managed by the migration package (golang-migrate), not gorm AutoMigrate.
+func NewPostgresRepository(dsn string, log *slog.Logger) (*PostgresRepository, error) {
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Error("postgres connection failed", "error", err)
+		return nil, err
+	}
+	log.Info("connected to postgres (product_db)")
+
+	return &PostgresRepository{db: db, log: log}, nil
+}
+
+func (r *PostgresRepository) Create(ctx context.Context, p *model.Product) error {
+	return r.db.WithContext(ctx).Create(p).Error
+}
+
+func (r *PostgresRepository) GetByID(ctx context.Context, id string) (*model.Product, error) {
+	var p model.Product
+	if err := r.db.WithContext(ctx).First(&p, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+</file>
+
+<file path="doc.md">
+# E-Commerce Microservices — Local Dev Guide
+
+## Prerequisites
+
+- Docker Desktop
+- kind
+- kubectl
+- make
+
+---
+
+## Cluster Setup
+
+```sh
+make cluster-up   # create kind cluster + ingress-nginx + metrics-server
+make deploy       # build images, load into kind, apply all manifests
+```
+
+> **Note:** `make deploy` may fail on the ingress step if ingress-nginx is still starting.
+> If that happens, wait ~30s then run:
+> ```sh
+> kubectl apply -f deploy/k8s/ingress/
+> ```
+
+---
+
+## Swagger UI
+
+Accessible via the ingress at `http://localhost` — no port-forward needed.
+
+| Service | URL |
+|---------|-----|
+| Product Service | http://localhost/swagger/product/index.html |
+| Cart Service    | http://localhost/swagger/cart/index.html    |
+| Order Service   | http://localhost/swagger/order/index.html   |
+
+---
+
+## API Endpoints
+
+All routed through the ingress at `http://localhost`.
+
+| Service | Base Path |
+|---------|-----------|
+| Product Service | http://localhost/api/v1/products |
+| Cart Service    | http://localhost/api/v1/carts    |
+| Order Service   | http://localhost/api/v1/orders   |
+
+---
+
+## Observability
+
+Accessible via NGINX Ingress — no port-forward needed:
+
+| Tool | URL | Notes |
+|------|-----|-------|
+| Grafana | http://localhost/grafana | Login: `admin` / `admin` |
+| Jaeger | http://localhost/jaeger | |
+| Temporal UI | http://temporal.localhost | See note below |
+
+> **Temporal UI:** `temporal.localhost` resolves to `127.0.0.1` in most modern browsers automatically.
+> If it doesn't load, add this line to `C:\Windows\System32\drivers\etc\hosts`:
+> ```
+> 127.0.0.1 temporal.localhost
+> ```
+
+---
+
+## Useful Commands
+
+```sh
+make images       # rebuild all Docker images
+make kind-load    # reload images into kind cluster after rebuild
+make undeploy     # delete all manifests
+make cluster-down # destroy the kind cluster
+make validate     # dry-run all manifests
+make swag         # regenerate Swagger docs (requires swag CLI)
+```
+
+### Rollout a single service after code change
+
+```sh
+docker build -t ecommerce/product-service:dev -f product-service/Dockerfile .
+kind load docker-image ecommerce/product-service:dev --name ecommerce
+kubectl rollout restart deployment/product-service -n ecommerce
+```
+</file>
+
+<file path="order-service/cmd/server/main.go">
+// @title           Order Service API
+// @version         1.0
+// @description     Order management service; order lifecycle is driven by a Temporal saga workflow.
+// @host            localhost:8082
+// @BasePath        /
+package main
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/toainguyen/ecommerce/order-service/internal/config"
+	delivery "github.com/toainguyen/ecommerce/order-service/internal/delivery/http"
+	_ "github.com/toainguyen/ecommerce/order-service/docs"
+	"github.com/toainguyen/ecommerce/order-service/internal/migration"
+	"github.com/toainguyen/ecommerce/order-service/internal/repository"
+	"github.com/toainguyen/ecommerce/order-service/internal/usecase"
+	"github.com/toainguyen/ecommerce/pkg/observability"
+	"go.temporal.io/sdk/client"
+)
+
+func main() {
+	cfg := config.Load()
+	log := observability.NewLogger(cfg.LogLevel)
+	log.Info("starting order-service", "port", cfg.HTTPPort)
+
+	ctx := context.Background()
+	shutdownTracing, err := observability.InitTracing(ctx, cfg.ServiceName, cfg.OTLPEndpoint, cfg.Environment)
+	if err != nil {
+		log.Warn("tracing init failed (continuing without traces)", "error", err)
+		shutdownTracing = func(context.Context) error { return nil }
+	}
+
+	// Run schema migrations before opening the repository.
+	if err := migration.Run(cfg.PostgresDSN, log); err != nil {
+		log.Error("fatal: migration failed", "error", err)
+		os.Exit(1)
+	}
+
+	repo, err := repository.NewPostgresRepository(cfg.PostgresDSN, log)
+	if err != nil {
+		log.Error("fatal: postgres unavailable", "error", err)
+		os.Exit(1)
+	}
+
+	tc, err := client.Dial(client.Options{
+		HostPort:  cfg.TemporalHostPort,
+		Namespace: cfg.TemporalNamespace,
+	})
+	if err != nil {
+		log.Error("fatal: temporal unavailable", "error", err)
+		os.Exit(1)
+	}
+	defer tc.Close()
+	log.Info("connected to temporal", "host", cfg.TemporalHostPort, "namespace", cfg.TemporalNamespace)
+
+	uc := usecase.NewOrderUsecase(repo, tc, cfg.TemporalTaskQueue, log)
+	handler := delivery.NewOrderHandler(uc, log)
+	srv := &http.Server{
+		Addr:              ":" + cfg.HTTPPort,
+		Handler:           delivery.NewRouter(handler),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("http server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+	log.Info("order-service listening", "addr", srv.Addr)
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+	log.Info("shutting down order-service")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	_ = srv.Shutdown(shutdownCtx)
+	_ = shutdownTracing(shutdownCtx)
+}
+</file>
+
+<file path="order-service/go.mod">
+module github.com/toainguyen/ecommerce/order-service
+
+go 1.26
+
+require (
+	github.com/go-chi/chi/v5 v5.1.0
+	github.com/golang-migrate/migrate/v4 v4.19.1
+	github.com/google/uuid v1.6.0
+	github.com/jackc/pgx/v5 v5.5.5
+	github.com/prometheus/client_golang v1.20.5
+	github.com/swaggo/http-swagger v1.3.4
+	github.com/swaggo/swag v1.16.6
+	github.com/toainguyen/ecommerce/pkg v0.0.0
+	go.temporal.io/sdk v1.45.0
+	gorm.io/datatypes v1.2.5
+	gorm.io/driver/postgres v1.5.9
+	gorm.io/gorm v1.25.12
+)
+
+replace github.com/toainguyen/ecommerce/pkg => ../pkg
+
+require (
+	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/KyleBanks/depth v1.2.1 // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-openapi/jsonpointer v0.19.5 // indirect
+	github.com/go-openapi/jsonreference v0.20.0 // indirect
+	github.com/go-openapi/spec v0.20.6 // indirect
+	github.com/go-openapi/swag v0.19.15 // indirect
+	github.com/go-sql-driver/mysql v1.8.1 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/mock v1.6.0 // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
+	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/josharian/intern v1.0.0 // indirect
+	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/nexus-rpc/sdk-go v0.6.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/prometheus/client_model v0.6.2 // indirect
+	github.com/prometheus/common v0.55.0 // indirect
+	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/robfig/cron v1.2.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/stretchr/testify v1.11.1 // indirect
+	github.com/swaggo/files v1.0.1 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/otel v1.43.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.31.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.31.0 // indirect
+	go.opentelemetry.io/otel/metric v1.43.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
+	go.temporal.io/api v1.62.12 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260610212136-7ab31c22f7ad // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad // indirect
+	google.golang.org/grpc v1.81.1 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gorm.io/driver/mysql v1.5.6 // indirect
+)
+</file>
+
+<file path="product-service/cmd/server/main.go">
+// @title           Product Service API
+// @version         1.0
+// @description     Product catalog service with Elasticsearch-backed search and autocomplete.
+// @host            localhost:8080
+// @BasePath        /
+package main
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/toainguyen/ecommerce/product-service/internal/config"
+	"github.com/toainguyen/ecommerce/product-service/internal/consumer"
+	delivery "github.com/toainguyen/ecommerce/product-service/internal/delivery/http"
+	_ "github.com/toainguyen/ecommerce/product-service/docs"
+	"github.com/toainguyen/ecommerce/product-service/internal/migration"
+	"github.com/toainguyen/ecommerce/product-service/internal/repository"
+	"github.com/toainguyen/ecommerce/product-service/internal/usecase"
+	"github.com/toainguyen/ecommerce/pkg/observability"
+)
+
+func main() {
+	cfg := config.Load()
+	log := observability.NewLogger(cfg.LogLevel)
+	log.Info("starting product-service", "port", cfg.HTTPPort)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	shutdownTracing, err := observability.InitTracing(ctx, cfg.ServiceName, cfg.OTLPEndpoint, cfg.Environment)
+	if err != nil {
+		log.Warn("tracing init failed (continuing without traces)", "error", err)
+		shutdownTracing = func(context.Context) error { return nil }
+	}
+
+	// Run schema migrations before opening repositories.
+	if err := migration.Run(cfg.PostgresDSN, log); err != nil {
+		log.Error("fatal: migration failed", "error", err)
+		os.Exit(1)
+	}
+
+	// Repositories (adapters).
+	pgRepo, err := repository.NewPostgresRepository(cfg.PostgresDSN, log)
+	if err != nil {
+		log.Error("fatal: postgres unavailable", "error", err)
+		os.Exit(1)
+	}
+	esRepo, err := repository.NewElasticRepository(cfg.ESAddress, log)
+	if err != nil {
+		log.Error("fatal: elasticsearch client init failed", "error", err)
+		os.Exit(1)
+	}
+
+	// Ensure the products index exists with the correct mapping.
+	if err := esRepo.EnsureIndex(ctx); err != nil {
+		log.Warn("elasticsearch index setup failed (search may not work)", "error", err)
+	}
+
+	// Start Kafka consumer: syncs CDC events from Postgres → Elasticsearch.
+	kafkaConsumer := consumer.NewKafkaConsumer(cfg.KafkaBroker, esRepo.Client(), log)
+	go kafkaConsumer.Start(ctx)
+
+	// Usecase + delivery.
+	uc := usecase.NewProductUsecase(pgRepo, esRepo)
+	handler := delivery.NewProductHandler(uc, log)
+	srv := &http.Server{
+		Addr:              ":" + cfg.HTTPPort,
+		Handler:           delivery.NewRouter(handler),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("http server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+	log.Info("product-service listening", "addr", srv.Addr)
+
+	// Graceful shutdown.
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+	log.Info("shutting down product-service")
+
+	// Cancel ctx first to stop the Kafka consumer goroutine.
+	cancel()
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+	_ = srv.Shutdown(shutdownCtx)
+	_ = shutdownTracing(shutdownCtx)
+}
+</file>
+
+<file path="product-service/go.mod">
+module github.com/toainguyen/ecommerce/product-service
+
+go 1.26
+
+require (
+	github.com/elastic/go-elasticsearch/v8 v8.15.0
+	github.com/go-chi/chi/v5 v5.1.0
+	github.com/golang-migrate/migrate/v4 v4.19.1
+	github.com/jackc/pgx/v5 v5.5.5
+	github.com/prometheus/client_golang v1.20.5
+	github.com/segmentio/kafka-go v0.4.51
+	github.com/swaggo/http-swagger v1.3.4
+	github.com/swaggo/swag v1.16.6
+	github.com/toainguyen/ecommerce/pkg v0.0.0
+	gorm.io/datatypes v1.2.5
+	gorm.io/driver/postgres v1.5.9
+	gorm.io/gorm v1.25.12
+)
+
+replace github.com/toainguyen/ecommerce/pkg => ../pkg
+
+require (
+	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/KyleBanks/depth v1.2.1 // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.6.0 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-openapi/jsonpointer v0.19.5 // indirect
+	github.com/go-openapi/jsonreference v0.20.0 // indirect
+	github.com/go-openapi/spec v0.20.6 // indirect
+	github.com/go-openapi/swag v0.19.15 // indirect
+	github.com/go-sql-driver/mysql v1.8.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
+	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/josharian/intern v1.0.0 // indirect
+	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/pierrec/lz4/v4 v4.1.16 // indirect
+	github.com/prometheus/client_model v0.6.2 // indirect
+	github.com/prometheus/common v0.55.0 // indirect
+	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/swaggo/files v1.0.1 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/otel v1.43.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.31.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.31.0 // indirect
+	go.opentelemetry.io/otel/metric v1.43.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
+	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260610212136-7ab31c22f7ad // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad // indirect
+	google.golang.org/grpc v1.81.1 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gorm.io/driver/mysql v1.5.6 // indirect
+)
+</file>
+
+<file path="README.md">
+# E-commerce Microservices (Go)
+
+A simplified microservices playground for learning **horizontal scaling, SQL/NoSQL,
+Temporal workflows, Elasticsearch, and CDC**. Each service uses Clean Architecture
+(`delivery → usecase → repository → model`) so infrastructure stays swappable behind ports.
+
+## Services
+
+| Service           | Storage              | Responsibility                              | Port |
+|-------------------|----------------------|---------------------------------------------|------|
+| `product-service` | PostgreSQL + ES      | Catalog + inventory; search/suggest         | 8080 |
+| `cart-service`    | MongoDB              | Volatile, high-write carts                  | 8081 |
+| `order-service`   | PostgreSQL + Temporal| Order flow as a Saga (workflow + worker)    | 8082 |
+
+### Endpoints (via NGINX Ingress)
+- `POST /api/v1/products`, `GET /api/v1/products/search`, `GET /api/v1/products/suggest`
+- `PUT /api/v1/carts`, `GET /api/v1/carts`
+- `POST /api/v1/orders`, `GET /api/v1/orders/{id}`
+
+Each service also exposes `/healthz`, `/readyz`, and `/metrics`.
+
+## Architecture
+
+```
+            ┌──────────────┐
+  client ─► │ NGINX Ingress│ ─► product / cart / order services (HPA: 2–5 replicas)
+            └──────────────┘
+product-service ─► PostgreSQL ─(WAL)─► Debezium ─► Kafka ─► Elasticsearch   (CDC)
+cart-service    ─► MongoDB
+order-service   ─► PostgreSQL  +  Temporal Cluster (OrderWorkflow saga + worker)
+
+Observability: app /metrics + kube-state-metrics + node-exporter ─► Prometheus ─► Grafana
+               OpenTelemetry traces ─► Jaeger ;  pod logs ─► Promtail ─► Loki ─► Grafana
+```
+
+## Layout
+
+```
+product-service/ cart-service/ order-service/   # Go apps (per-service go.mod + go.work)
+  cmd/server   cmd/worker (order only)
+  internal/{config,delivery/http,usecase,repository,model,observability,workflow}
+deploy/k8s/{infra,apps,ingress,observability}    # raw Kubernetes manifests (+ Debezium connector)
+api-gateway/nginx.conf.template                   # reference (Ingress is primary)
+```
+
+## Quick start (kind)
+
+```bash
+make cluster-up          # kind cluster + NGINX ingress + metrics-server
+make images kind-load    # build service images, side-load into kind
+make deploy              # apply namespaces -> infra -> apps -> ingress -> observability
+kubectl get pods -A      # wait for Ready
+make register-connector  # register the Debezium Postgres CDC source
+
+# smoke test
+curl localhost/api/v1/products/search?q=phone
+curl -X PUT  localhost/api/v1/carts  -H 'X-User-ID: u1' -d '{"items":[{"sku":"SKU-1","quantity":2}]}'
+curl -X POST localhost/api/v1/orders -d '{"user_id":"u1","total_cents":1999}'
+```
+
+### Observability / scaling
+
+```bash
+make pf-grafana    # http://localhost:3000  (admin/admin) — Scaling Overview dashboard
+make pf-jaeger     # http://localhost:16686 — order saga traces
+make pf-temporal   # http://localhost:8088  — workflow executions
+kubectl get hpa -n ecommerce -w   # watch replicas scale under load
+```
+
+## Local development
+
+```bash
+make tidy && make build   # go mod tidy + go build ./... per service
+make validate             # kubectl client-side dry-run of all manifests
+```
+
+> Stubs: handlers return mock/minimal data; saga activities are no-ops that drive the
+> state machine. No auth. Schema is managed by golang-migrate: SQL migrations are
+> embedded in each service binary (`internal/migration/sql`) and applied at startup
+> from `main.go`. The product migration also sets up the Debezium CDC publication.
+</file>
+
+<file path="Makefile">
+# ============================================================================
+# E-commerce Microservices — Makefile
+#
+# Recipes are written to run under BOTH Windows cmd.exe (GNU Make's default
+# shell when invoked from PowerShell/cmd) and POSIX sh. That means: no bash
+# `for` loops, no grep/awk — just plain `cd <dir> && <cmd>` lines, which both
+# shells understand.
+# ============================================================================
+
+REGISTRY      ?= ecommerce
+TAG           ?= dev
+KIND_CLUSTER  ?= ecommerce
+K8S_DIR       := deploy/k8s
+
+.DEFAULT_GOAL := help
+
+## ---- Go ----------------------------------------------------------------
+
+.PHONY: tidy
+tidy: ## go mod tidy for every module
+	cd pkg && go mod tidy
+	cd product-service && go mod tidy
+	cd cart-service && go mod tidy
+	cd order-service && go mod tidy
+
+.PHONY: build
+build: ## go build ./... for every service
+	cd product-service && go build ./...
+	cd cart-service && go build ./...
+	cd order-service && go build ./...
+
+.PHONY: work
+work: ## (re)generate go.work
+	go work use ./pkg ./product-service ./cart-service ./order-service
+
+.PHONY: swag
+swag: ## regenerate swagger docs for every service (requires swag CLI)
+	cd product-service && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+	cd cart-service && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+	cd order-service && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+
+## ---- Docker images -----------------------------------------------------
+
+.PHONY: images
+images: ## build a docker image per service (context = repo root, for shared ./pkg)
+	docker build -t $(REGISTRY)/product-service:$(TAG) -f product-service/Dockerfile .
+	docker build -t $(REGISTRY)/cart-service:$(TAG) -f cart-service/Dockerfile .
+	docker build -t $(REGISTRY)/order-service:$(TAG) -f order-service/Dockerfile .
+
+.PHONY: kind-load
+kind-load: ## side-load images into the kind cluster (no registry needed)
+	kind load docker-image $(REGISTRY)/product-service:$(TAG) --name $(KIND_CLUSTER)
+	kind load docker-image $(REGISTRY)/cart-service:$(TAG) --name $(KIND_CLUSTER)
+	kind load docker-image $(REGISTRY)/order-service:$(TAG) --name $(KIND_CLUSTER)
+
+## ---- Cluster lifecycle -------------------------------------------------
+
+.PHONY: cluster-up
+cluster-up: ## create a local kind cluster + ingress + metrics-server
+	kind create cluster --name $(KIND_CLUSTER) --config deploy/kind-config.yaml
+	kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+	kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+	kubectl patch deployment metrics-server -n kube-system --patch-file $(K8S_DIR)/system/metrics-server-patch.yaml
+
+.PHONY: cluster-down
+cluster-down: ## delete the kind cluster
+	kind delete cluster --name $(KIND_CLUSTER)
+
+.PHONY: cluster-pause
+cluster-pause: ## pause the kind cluster (saves CPU/RAM without losing state)
+	docker pause $(KIND_CLUSTER)-control-plane
+
+.PHONY: cluster-resume
+cluster-resume: ## resume a paused kind cluster
+	docker unpause $(KIND_CLUSTER)-control-plane
+
+.PHONY: cluster-recover
+cluster-recover: ## recover kind cluster after Docker Desktop restart (re-attaches network then starts)
+	docker network connect kind $(KIND_CLUSTER)-control-plane 2>/dev/null || true
+	docker start $(KIND_CLUSTER)-control-plane
+
+## ---- Deploy ------------------------------------------------------------
+
+.PHONY: deploy
+deploy: images kind-load ## build images, load into kind, then apply all manifests
+	kubectl apply -f $(K8S_DIR)/00-namespace.yaml
+	kubectl apply -f $(K8S_DIR)/infra/
+	kubectl apply -f $(K8S_DIR)/apps/
+	kubectl wait --namespace ingress-nginx \
+		--for=condition=ready pod \
+		--selector=app.kubernetes.io/component=controller \
+		--timeout=180s
+	kubectl apply -f $(K8S_DIR)/ingress/
+	kubectl apply -f $(K8S_DIR)/observability/
+
+.PHONY: undeploy
+undeploy: ## delete all manifests
+	-kubectl delete -f $(K8S_DIR)/observability/
+	-kubectl delete -f $(K8S_DIR)/ingress/
+	-kubectl delete -f $(K8S_DIR)/apps/
+	-kubectl delete -f $(K8S_DIR)/infra/
+	-kubectl delete -f $(K8S_DIR)/00-namespace.yaml
+
+.PHONY: validate
+validate: ## client-side dry-run of every manifest
+	kubectl apply --dry-run=client -R -f $(K8S_DIR)/
+
+## ---- CDC / Debezium ----------------------------------------------------
+
+.PHONY: register-connector
+register-connector: ## register the Debezium Postgres source connector via Connect REST API
+	kubectl -n ecommerce exec -i deploy/kafka-connect -- curl -s -X POST -H "Content-Type: application/json" http://localhost:8083/connectors -d @- < $(K8S_DIR)/infra/debezium/register-postgres-connector.json
+
+## ---- Port-forwards (run in separate terminals) -------------------------
+
+.PHONY: pf-ingress
+pf-ingress: ## Ingress -> http://localhost:80 (workaround when cluster lacks extraPortMappings)
+	kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 80:80
+
+.PHONY: pf-product
+pf-product: ## product-service swagger -> http://localhost:8080/swagger/index.html
+	kubectl -n ecommerce port-forward svc/product-service 8080:8080
+
+.PHONY: pf-grafana
+pf-grafana: ## Grafana -> http://localhost:3000
+	kubectl -n observability port-forward svc/grafana 3000:3000
+
+.PHONY: pf-jaeger
+pf-jaeger: ## Jaeger UI -> http://localhost:16686
+	kubectl -n observability port-forward svc/jaeger 16686:16686
+
+.PHONY: pf-temporal
+pf-temporal: ## Temporal UI -> http://localhost:8088
+	kubectl -n ecommerce port-forward svc/temporal-ui 8088:8080
+
+.PHONY: help
+help: ## show available targets
+	@echo Targets:
+	@echo   tidy                go mod tidy for every module
+	@echo   build               go build ./... for every service
+	@echo   work                regenerate go.work
+	@echo   images              build a docker image per service
+	@echo   kind-load           side-load images into the kind cluster
+	@echo   cluster-up          create kind cluster + ingress + metrics-server
+	@echo   cluster-down        delete the kind cluster
+	@echo   cluster-pause       pause the kind cluster (saves CPU/RAM)
+	@echo   cluster-resume      resume a paused kind cluster
+	@echo   cluster-recover     recover cluster after Docker Desktop restart
+	@echo   deploy              build images, load into kind, apply all manifests
+	@echo   undeploy            delete all manifests
+	@echo   validate            client-side dry-run of all manifests
+	@echo   swag                regenerate swagger docs for every service
+	@echo   register-connector  register the Debezium Postgres CDC source
+	@echo   pf-ingress          port-forward ingress  (localhost:80) — temp workaround
+	@echo   pf-product          port-forward product-service swagger (localhost:8080)
+	@echo   pf-grafana          port-forward Grafana  (localhost:3000)
+	@echo   pf-jaeger           port-forward Jaeger   (localhost:16686)
+	@echo   pf-temporal         port-forward Temporal (localhost:8088)
+</file>
+
+</files>

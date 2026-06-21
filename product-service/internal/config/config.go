@@ -10,6 +10,7 @@ type Config struct {
 	HTTPPort    string
 	PostgresDSN string
 	ESAddress   string
+	KafkaBroker string
 
 	ServiceName  string
 	OTLPEndpoint string
@@ -24,6 +25,7 @@ func Load() Config {
 		HTTPPort:    getenv("PRODUCT_HTTP_PORT", "8080"),
 		PostgresDSN: getenv("PRODUCT_PG_DSN", "host=localhost port=5433 user=product password=product dbname=product_db sslmode=disable"),
 		ESAddress:   getenv("PRODUCT_ES_ADDRESS", "http://localhost:9200"),
+		KafkaBroker: getenv("KAFKA_BROKER", "localhost:9092"),
 
 		ServiceName:  getenv("OTEL_SERVICE_NAME", "product-service"),
 		OTLPEndpoint: getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/toainguyen/ecommerce/product-service/internal/config"
+	"github.com/toainguyen/ecommerce/product-service/internal/consumer"
 	delivery "github.com/toainguyen/ecommerce/product-service/internal/delivery/http"
 	_ "github.com/toainguyen/ecommerce/product-service/docs"
 	"github.com/toainguyen/ecommerce/product-service/internal/migration"
@@ -28,7 +29,9 @@ func main() {
 	log := observability.NewLogger(cfg.LogLevel)
 	log.Info("starting product-service", "port", cfg.HTTPPort)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	shutdownTracing, err := observability.InitTracing(ctx, cfg.ServiceName, cfg.OTLPEndpoint, cfg.Environment)
 	if err != nil {
 		log.Warn("tracing init failed (continuing without traces)", "error", err)
@@ -53,6 +56,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Ensure the products index exists with the correct mapping.
+	if err := esRepo.EnsureIndex(ctx); err != nil {
+		log.Warn("elasticsearch index setup failed (search may not work)", "error", err)
+	}
+
+	// Start Kafka consumer: syncs CDC events from Postgres → Elasticsearch.
+	kafkaConsumer := consumer.NewKafkaConsumer(cfg.KafkaBroker, esRepo.Client(), log)
+	go kafkaConsumer.Start(ctx)
+
 	// Usecase + delivery.
 	uc := usecase.NewProductUsecase(pgRepo, esRepo)
 	handler := delivery.NewProductHandler(uc, log)
@@ -76,8 +88,11 @@ func main() {
 	<-stop
 	log.Info("shutting down product-service")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	// Cancel ctx first to stop the Kafka consumer goroutine.
+	cancel()
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
 	_ = srv.Shutdown(shutdownCtx)
 	_ = shutdownTracing(shutdownCtx)
 }
