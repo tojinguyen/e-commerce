@@ -2,11 +2,14 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/toainguyen/ecommerce/product-service/internal/model"
+	"github.com/toainguyen/ecommerce/product-service/internal/repository"
 	"github.com/toainguyen/ecommerce/product-service/internal/usecase"
 )
 
@@ -43,6 +46,73 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, p)
+}
+
+// Update godoc
+// @Summary      Update a product
+// @Description  Replaces an existing product in PostgreSQL; the change is projected to Elasticsearch via CDC
+// @Tags         products
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string         true  "Product ID"
+// @Param        product  body      model.Product  true  "Product payload"
+// @Success      200      {object}  model.Product
+// @Failure      400      {object}  map[string]string
+// @Failure      404      {object}  map[string]string
+// @Failure      500      {object}  map[string]string
+// @Router       /api/v1/products/{id} [put]
+func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "missing product id")
+		return
+	}
+	var p model.Product
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	p.ID = id
+	updated, err := h.uc.UpdateProduct(r.Context(), &p)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "product not found")
+			return
+		}
+		h.log.Error("update product failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "could not update product")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+// Delete godoc
+// @Summary      Delete a product
+// @Description  Removes a product from PostgreSQL; the deletion is propagated to Elasticsearch via CDC
+// @Tags         products
+// @Produce      json
+// @Param        id   path  string  true  "Product ID"
+// @Success      204  "No Content"
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /api/v1/products/{id} [delete]
+func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "missing product id")
+		return
+	}
+	if err := h.uc.DeleteProduct(r.Context(), id); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "product not found")
+			return
+		}
+		h.log.Error("delete product failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "could not delete product")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Search godoc

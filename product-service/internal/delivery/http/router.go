@@ -29,6 +29,8 @@ func NewRouter(h *ProductHandler) http.Handler {
 		r.Post("/", h.Create)
 		r.Get("/search", h.Search)
 		r.Get("/suggest", h.Suggest)
+		r.Put("/{id}", h.Update)
+		r.Delete("/{id}", h.Delete)
 	})
 
 	return r
