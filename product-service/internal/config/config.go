@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 )
 
 // Config holds runtime configuration sourced from the environment. In Kubernetes
@@ -11,6 +12,10 @@ type Config struct {
 	PostgresDSN string
 	ESAddress   string
 	KafkaBroker string
+	// KafkaConsumerWorkers is the number of ordered lanes (worker goroutines) used
+	// by the CDC consumer to index into Elasticsearch in parallel while preserving
+	// per-product ordering.
+	KafkaConsumerWorkers int
 
 	ServiceName  string
 	OTLPEndpoint string
@@ -25,7 +30,8 @@ func Load() Config {
 		HTTPPort:    getenv("PRODUCT_HTTP_PORT", "8080"),
 		PostgresDSN: getenv("PRODUCT_PG_DSN", "host=localhost port=5433 user=product password=product dbname=product_db sslmode=disable"),
 		ESAddress:   getenv("PRODUCT_ES_ADDRESS", "http://localhost:9200"),
-		KafkaBroker: getenv("KAFKA_BROKER", "localhost:9092"),
+		KafkaBroker:          getenv("KAFKA_BROKER", "localhost:9092"),
+		KafkaConsumerWorkers: getenvInt("KAFKA_CONSUMER_WORKERS", 8),
 
 		ServiceName:  getenv("OTEL_SERVICE_NAME", "product-service"),
 		OTLPEndpoint: getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
@@ -37,6 +43,15 @@ func Load() Config {
 func getenv(key, fallback string) string {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
 		return v
+	}
+	return fallback
+}
+
+func getenvInt(key string, fallback int) int {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
 	}
 	return fallback
 }

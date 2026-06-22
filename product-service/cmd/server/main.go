@@ -62,8 +62,12 @@ func main() {
 	}
 
 	// Start Kafka consumer: syncs CDC events from Postgres → Elasticsearch.
-	kafkaConsumer := consumer.NewKafkaConsumer(cfg.KafkaBroker, esRepo.Client(), log)
-	go kafkaConsumer.Start(ctx)
+	kafkaConsumer := consumer.NewKafkaConsumer(cfg.KafkaBroker, esRepo.Client(), log, cfg.KafkaConsumerWorkers)
+	consumerDone := make(chan struct{})
+	go func() {
+		kafkaConsumer.Start(ctx)
+		close(consumerDone)
+	}()
 
 	// Usecase + delivery.
 	uc := usecase.NewProductUsecase(pgRepo, esRepo)
@@ -88,8 +92,10 @@ func main() {
 	<-stop
 	log.Info("shutting down product-service")
 
-	// Cancel ctx first to stop the Kafka consumer goroutine.
+	// Cancel ctx first to stop the Kafka consumer goroutine, then wait for it to
+	// drain in-flight messages and commit offsets before exiting.
 	cancel()
+	<-consumerDone
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
