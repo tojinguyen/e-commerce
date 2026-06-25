@@ -1,7 +1,6 @@
 // @title           Product Service API
 // @version         1.0
 // @description     Product catalog service with Elasticsearch-backed search and autocomplete.
-// @host            localhost:8080
 // @BasePath        /
 package main
 
@@ -74,7 +73,7 @@ func main() {
 	handler := delivery.NewProductHandler(uc, log)
 	srv := &http.Server{
 		Addr:              ":" + cfg.HTTPPort,
-		Handler:           delivery.NewRouter(handler),
+		Handler:           delivery.NewRouter(handler, log),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

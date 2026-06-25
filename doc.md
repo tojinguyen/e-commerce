@@ -66,6 +66,36 @@ Accessible via NGINX Ingress — no port-forward needed:
 
 ---
 
+## Search (Elasticsearch + Kibana)
+
+Both require a port-forward (not exposed via ingress):
+
+```sh
+make pf-es       # Elasticsearch REST API -> http://localhost:9200
+make pf-kibana   # Kibana UI            -> http://localhost:5601
+```
+
+| Tool | URL | Notes |
+|------|-----|-------|
+| Kibana | http://localhost:5601 | Discover + Dev Tools. No auth (ES security disabled) |
+| Elasticsearch | http://localhost:9200 | REST API |
+
+In Kibana **Dev Tools** run `GET products/_search`, or create a Data View named
+`products` to browse in **Discover**.
+
+Quick checks via REST API:
+
+```sh
+curl http://localhost:9200/_cat/indices?v        # list indices + doc counts
+curl http://localhost:9200/products/_search?pretty   # view documents
+curl http://localhost:9200/products/_count       # count documents
+```
+
+> The `products` index is populated by CDC (Debezium -> Kafka -> consumer). If it's
+> empty, ensure the connector is registered (`make register-connector`).
+
+---
+
 ## Useful Commands
 
 ```sh

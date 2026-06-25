@@ -1,0 +1,50 @@
+# Kibana UI for Elasticsearch (Discover + Dev Tools). Talks to the in-cluster
+# elasticsearch:9200 service. ES has xpack.security disabled, so no auth here.
+# UI on :5601 (port-forward: make pf-kibana).
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: ecommerce
+spec:
+  selector:
+    app: kibana
+  ports:
+    - port: 5601
+      targetPort: 5601
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:8.15.0
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: http://elasticsearch:9200
+          ports:
+            - containerPort: 5601
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+            initialDelaySeconds: 40
+            periodSeconds: 15
+            failureThreshold: 10

@@ -86,12 +86,33 @@ deploy: images kind-load ## build images, load into kind, then apply all manifes
 	kubectl apply -f $(K8S_DIR)/00-namespace.yaml
 	kubectl apply -f $(K8S_DIR)/infra/
 	kubectl apply -f $(K8S_DIR)/apps/
+	$(MAKE) restart
 	kubectl wait --namespace ingress-nginx \
 		--for=condition=ready pod \
 		--selector=app.kubernetes.io/component=controller \
 		--timeout=180s
 	kubectl apply -f $(K8S_DIR)/ingress/
 	kubectl apply -f $(K8S_DIR)/observability/
+	$(MAKE) pf
+
+.PHONY: pf
+pf: ## background port-forward all DBs + search for DBeaver/Kibana (product:5433, order:5434, mongo:27017, es:9200, kibana:5601)
+	kubectl -n ecommerce wait --for=condition=ready pod -l app=postgres-product --timeout=180s
+	kubectl -n ecommerce wait --for=condition=ready pod -l app=postgres-order --timeout=180s
+	kubectl -n ecommerce wait --for=condition=ready pod -l app=mongodb --timeout=180s
+	kubectl -n ecommerce wait --for=condition=ready pod -l app=elasticsearch --timeout=180s
+	kubectl -n ecommerce wait --for=condition=ready pod -l app=kibana --timeout=180s
+	cmd /c start "" /min kubectl -n ecommerce port-forward svc/postgres-product 5433:5432
+	cmd /c start "" /min kubectl -n ecommerce port-forward svc/postgres-order 5434:5432
+	cmd /c start "" /min kubectl -n ecommerce port-forward svc/mongodb 27017:27017
+	cmd /c start "" /min kubectl -n ecommerce port-forward svc/elasticsearch 9200:9200
+	cmd /c start "" /min kubectl -n ecommerce port-forward svc/kibana 5601:5601
+
+.PHONY: restart
+restart: ## force pods to pick up freshly side-loaded :$(TAG) images (same-tag rebuilds don't change the manifest, so apply alone won't roll)
+	kubectl -n ecommerce rollout restart deployment/product-service
+	kubectl -n ecommerce rollout restart deployment/cart-service
+	kubectl -n ecommerce rollout restart deployment/order-service
 
 .PHONY: undeploy
 undeploy: ## delete all manifests
@@ -121,6 +142,14 @@ pf-ingress: ## Ingress -> http://localhost:80 (workaround when cluster lacks ext
 pf-product: ## product-service swagger -> http://localhost:8080/swagger/index.html
 	kubectl -n ecommerce port-forward svc/product-service 8080:8080
 
+.PHONY: pf-es
+pf-es: ## Elasticsearch REST API -> http://localhost:9200 (e.g. /products/_search?pretty)
+	kubectl -n ecommerce port-forward svc/elasticsearch 9200:9200
+
+.PHONY: pf-kibana
+pf-kibana: ## Kibana UI -> http://localhost:5601 (Discover + Dev Tools)
+	kubectl -n ecommerce port-forward svc/kibana 5601:5601
+
 .PHONY: pf-grafana
 pf-grafana: ## Grafana -> http://localhost:3000
 	kubectl -n observability port-forward svc/grafana 3000:3000
@@ -147,12 +176,16 @@ help: ## show available targets
 	@echo   cluster-resume      resume a paused kind cluster
 	@echo   cluster-recover     recover cluster after Docker Desktop restart
 	@echo   deploy              build images, load into kind, apply all manifests
+	@echo   restart             rollout restart app deployments to pick up new :$(TAG) images
 	@echo   undeploy            delete all manifests
 	@echo   validate            client-side dry-run of all manifests
 	@echo   swag                regenerate swagger docs for every service
 	@echo   register-connector  register the Debezium Postgres CDC source
+	@echo   pf                  background port-forward all DBs + ES + Kibana (5433/5434/27017/9200/5601)
 	@echo   pf-ingress          port-forward ingress  (localhost:80) — temp workaround
 	@echo   pf-product          port-forward product-service swagger (localhost:8080)
+	@echo   pf-es               port-forward Elasticsearch (localhost:9200)
+	@echo   pf-kibana           port-forward Kibana UI (localhost:5601)
 	@echo   pf-grafana          port-forward Grafana  (localhost:3000)
 	@echo   pf-jaeger           port-forward Jaeger   (localhost:16686)
 	@echo   pf-temporal         port-forward Temporal (localhost:8088)

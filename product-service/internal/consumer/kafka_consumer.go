@@ -126,7 +126,14 @@ func (c *KafkaConsumer) fetchLoop(ctx context.Context) {
 			continue
 		}
 
-		lane := c.lanes[c.laneFor(msg)]
+		laneIdx := c.laneFor(msg)
+		c.log.Debug("kafka message fetched",
+			"partition", msg.Partition,
+			"offset", msg.Offset,
+			"key", string(msg.Key),
+			"lane", laneIdx,
+		)
+		lane := c.lanes[laneIdx]
 		select {
 		case lane <- msg:
 		case <-ctx.Done():
@@ -188,6 +195,8 @@ func (c *KafkaConsumer) handle(ctx context.Context, raw []byte) error {
 		return fmt.Errorf("unmarshal debezium event: %w", err)
 	}
 
+	c.log.Debug("handling debezium event", "op", event.Op)
+
 	switch event.Op {
 	case "c", "u", "r": // create, update, snapshot read
 		if event.After == nil {
@@ -199,6 +208,8 @@ func (c *KafkaConsumer) handle(ctx context.Context, raw []byte) error {
 			return nil
 		}
 		return c.delete(ctx, event.Before.ID)
+	default:
+		c.log.Warn("ignoring unknown debezium op", "op", event.Op)
 	}
 	return nil
 }

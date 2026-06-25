@@ -1,7 +1,9 @@
 package http
 
 import (
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -10,11 +12,12 @@ import (
 )
 
 // NewRouter wires middleware, health/metrics endpoints, and the product routes.
-func NewRouter(h *ProductHandler) http.Handler {
+func NewRouter(h *ProductHandler, log *slog.Logger) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
+	r.Use(requestLogger(log))
 	r.Use(allowAllCORS)
 
 	// Operational endpoints.
@@ -35,6 +38,34 @@ func NewRouter(h *ProductHandler) http.Handler {
 	})
 
 	return r
+}
+
+// requestLogger logs one structured line per HTTP request with method, path,
+// status, latency and request id. Operational/probe endpoints are skipped to
+// keep the logs focused on real API traffic.
+func requestLogger(log *slog.Logger) func(http.Handler) http.Handler {
+	skip := map[string]bool{"/healthz": true, "/readyz": true, "/metrics": true}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if skip[r.URL.Path] {
+				next.ServeHTTP(w, r)
+				return
+			}
+			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			start := time.Now()
+			next.ServeHTTP(ww, r)
+			log.Info("http request",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"query", r.URL.RawQuery,
+				"status", ww.Status(),
+				"bytes", ww.BytesWritten(),
+				"duration_ms", time.Since(start).Milliseconds(),
+				"request_id", middleware.GetReqID(r.Context()),
+				"remote_ip", r.RemoteAddr,
+			)
+		})
+	}
 }
 
 // allowAllCORS permits cross-origin requests from any origin and answers

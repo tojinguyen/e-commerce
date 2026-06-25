@@ -27,7 +27,6 @@ definitions:
       updated_at:
         type: string
     type: object
-host: localhost:8080
 info:
   contact: {}
   description: Product catalog service with Elasticsearch-backed search and autocomplete.

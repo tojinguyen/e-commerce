@@ -41,10 +41,11 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.uc.CreateProduct(r.Context(), &p); err != nil {
-		h.log.Error("create product failed", "error", err)
+		h.log.Error("create product failed", "error", err, "sku", p.SKU)
 		writeError(w, http.StatusInternalServerError, "could not create product")
 		return
 	}
+	h.log.Info("product created", "id", p.ID, "sku", p.SKU, "name", p.Name)
 	writeJSON(w, http.StatusCreated, p)
 }
 
@@ -79,10 +80,11 @@ func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "product not found")
 			return
 		}
-		h.log.Error("update product failed", "error", err)
+		h.log.Error("update product failed", "error", err, "id", id)
 		writeError(w, http.StatusInternalServerError, "could not update product")
 		return
 	}
+	h.log.Info("product updated", "id", id, "sku", updated.SKU)
 	writeJSON(w, http.StatusOK, updated)
 }
 
@@ -108,10 +110,11 @@ func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "product not found")
 			return
 		}
-		h.log.Error("delete product failed", "error", err)
+		h.log.Error("delete product failed", "error", err, "id", id)
 		writeError(w, http.StatusInternalServerError, "could not delete product")
 		return
 	}
+	h.log.Info("product deleted", "id", id)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -130,9 +133,11 @@ func (h *ProductHandler) Search(w http.ResponseWriter, r *http.Request) {
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
 	results, err := h.uc.Search(r.Context(), q, size)
 	if err != nil {
+		h.log.Error("search failed", "error", err, "query", q)
 		writeError(w, http.StatusInternalServerError, "search failed")
 		return
 	}
+	h.log.Info("search executed", "query", q, "size", size, "hits", len(results))
 	writeJSON(w, http.StatusOK, map[string]any{"query": q, "results": results})
 }
 
@@ -151,9 +156,11 @@ func (h *ProductHandler) Suggest(w http.ResponseWriter, r *http.Request) {
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
 	suggestions, err := h.uc.Suggest(r.Context(), prefix, size)
 	if err != nil {
+		h.log.Error("suggest failed", "error", err, "prefix", prefix)
 		writeError(w, http.StatusInternalServerError, "suggest failed")
 		return
 	}
+	h.log.Info("suggest executed", "prefix", prefix, "size", size, "count", len(suggestions))
 	writeJSON(w, http.StatusOK, map[string]any{"prefix": prefix, "suggestions": suggestions})
 }
 
