@@ -12,6 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
@@ -59,6 +60,14 @@ func InitTracing(ctx context.Context, serviceName, endpoint, environment string)
 		sdktrace.WithResource(res),
 	)
 	otel.SetTracerProvider(tp)
+
+	// Register the W3C propagator so trace context flows across HTTP calls (to
+	// product-service) and Temporal boundaries; without it each hop would start a
+	// brand-new, disconnected trace.
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
 
 	return tp.Shutdown, nil
 }

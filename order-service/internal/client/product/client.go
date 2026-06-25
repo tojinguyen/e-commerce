@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // Product is the subset of the catalog product needed for price verification.
@@ -31,7 +33,12 @@ type Client struct {
 func New(baseURL string) *Client {
 	return &Client{
 		baseURL: baseURL,
-		http:    &http.Client{Timeout: 5 * time.Second},
+		// otelhttp transport emits a client span for each request and injects the
+		// trace headers, linking this call into the order-service trace.
+		http: &http.Client{
+			Timeout:   5 * time.Second,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		},
 	}
 }
 

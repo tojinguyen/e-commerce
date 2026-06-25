@@ -20,9 +20,12 @@ import (
 	_ "github.com/toainguyen/ecommerce/order-service/docs"
 	"github.com/toainguyen/ecommerce/order-service/internal/migration"
 	"github.com/toainguyen/ecommerce/order-service/internal/repository"
+	"github.com/toainguyen/ecommerce/order-service/internal/uow"
 	"github.com/toainguyen/ecommerce/order-service/internal/usecase"
 	"github.com/toainguyen/ecommerce/pkg/observability"
 	"go.temporal.io/sdk/client"
+	temporalotel "go.temporal.io/sdk/contrib/opentelemetry"
+	"go.temporal.io/sdk/interceptor"
 )
 
 func main() {
@@ -43,15 +46,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	repo, err := repository.NewPostgresRepository(cfg.PostgresDSN, log)
+	repo, db, err := repository.NewPostgresRepository(cfg.PostgresDSN, log)
 	if err != nil {
 		log.Error("fatal: postgres unavailable", "error", err)
 		os.Exit(1)
 	}
+	orderUoW := uow.New(db, log)
 
+	// Tracing interceptor injects the current trace context when starting the
+	// workflow, so the saga (run on the worker) joins the create-order trace.
+	tracingInterceptor, err := temporalotel.NewTracingInterceptor(temporalotel.TracerOptions{})
+	if err != nil {
+		log.Error("fatal: temporal tracing interceptor", "error", err)
+		os.Exit(1)
+	}
 	tc, err := client.Dial(client.Options{
-		HostPort:  cfg.TemporalHostPort,
-		Namespace: cfg.TemporalNamespace,
+		HostPort:     cfg.TemporalHostPort,
+		Namespace:    cfg.TemporalNamespace,
+		Interceptors: []interceptor.ClientInterceptor{tracingInterceptor},
 	})
 	if err != nil {
 		log.Error("fatal: temporal unavailable", "error", err)
@@ -61,7 +73,7 @@ func main() {
 	log.Info("connected to temporal", "host", cfg.TemporalHostPort, "namespace", cfg.TemporalNamespace)
 
 	products := productclient.New(cfg.ProductServiceBaseURL)
-	uc := usecase.NewOrderUsecase(repo, tc, cfg.TemporalTaskQueue, products, log)
+	uc := usecase.NewOrderUsecase(repo, orderUoW, tc, cfg.TemporalTaskQueue, products, log)
 	handler := delivery.NewOrderHandler(uc, log)
 	srv := &http.Server{
 		Addr:              ":" + cfg.HTTPPort,

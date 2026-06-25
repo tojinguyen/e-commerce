@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/riandyrn/otelchi"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -13,6 +14,9 @@ import (
 func NewRouter(h *OrderHandler) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
+	// otelchi opens the root server span per request and names it after the matched
+	// chi route (e.g. "POST /api/v1/orders"); all downstream spans hang off it.
+	r.Use(otelchi.Middleware("order-service", otelchi.WithChiRoutes(r)))
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(allowAllCORS)
