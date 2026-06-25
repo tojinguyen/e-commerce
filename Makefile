@@ -82,7 +82,7 @@ cluster-recover: ## recover kind cluster after Docker Desktop restart (re-attach
 ## ---- Deploy ------------------------------------------------------------
 
 .PHONY: deploy
-deploy: images kind-load ## build images, load into kind, then apply all manifests
+deploy: swag images kind-load ## regenerate swagger, build images, load into kind, then apply all manifests
 	kubectl apply -f $(K8S_DIR)/00-namespace.yaml
 	kubectl apply -f $(K8S_DIR)/infra/
 	kubectl apply -f $(K8S_DIR)/apps/

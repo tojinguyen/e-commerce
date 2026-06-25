@@ -1,7 +1,7 @@
 // @title           Cart Service API
 // @version         1.0
 // @description     Shopping cart service backed by MongoDB.
-// @host            localhost:8081
+// @host            localhost
 // @BasePath        /
 package main
 

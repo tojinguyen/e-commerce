@@ -22,7 +22,7 @@ definitions:
       unit_cents:
         type: integer
     type: object
-host: localhost:8081
+host: localhost
 info:
   contact: {}
   description: Shopping cart service backed by MongoDB.

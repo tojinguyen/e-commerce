@@ -6,7 +6,7 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:8082",
+    "host": "localhost",
     "basePath": "/",
     "paths": {
         "/api/v1/orders": {
@@ -29,7 +29,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order"
+                            "$ref": "#/definitions/internal_delivery_http.CreateOrderRequest"
                         }
                     }
                 ],
@@ -132,6 +132,40 @@
                     "type": "string"
                 },
                 "workflow_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_toainguyen_ecommerce_order-service_internal_model.OrderItem": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "unit_cents": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_delivery_http.CreateOrderRequest": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.OrderItem"
+                    }
+                },
+                "user_id": {
                     "type": "string"
                 }
             }

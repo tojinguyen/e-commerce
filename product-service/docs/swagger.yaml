@@ -68,16 +68,104 @@ paths:
       summary: Create a product
       tags:
       - products
+  /api/v1/products/{id}:
+    delete:
+      description: Removes a product from PostgreSQL; the deletion is propagated to
+        Elasticsearch via CDC
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a product
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      description: Replaces an existing product in PostgreSQL; the change is projected
+        to Elasticsearch via CDC
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Product payload
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a product
+      tags:
+      - products
   /api/v1/products/search:
     get:
       description: Full-text search against Elasticsearch; returns matching products
         with relevance scores
       parameters:
-      - description: Search query
+      - description: Search query (omit for a pure range search)
         in: query
         name: q
-        required: true
         type: string
+      - description: Minimum price in cents (inclusive)
+        in: query
+        name: min_price
+        type: integer
+      - description: Maximum price in cents (inclusive)
+        in: query
+        name: max_price
+        type: integer
       - description: Max results to return (default 10)
         in: query
         name: size

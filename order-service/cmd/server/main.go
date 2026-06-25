@@ -1,7 +1,7 @@
 // @title           Order Service API
 // @version         1.0
 // @description     Order management service; order lifecycle is driven by a Temporal saga workflow.
-// @host            localhost:8082
+// @host            localhost
 // @BasePath        /
 package main
 

@@ -23,7 +23,29 @@ definitions:
       workflow_id:
         type: string
     type: object
-host: localhost:8082
+  github_com_toainguyen_ecommerce_order-service_internal_model.OrderItem:
+    properties:
+      product_id:
+        type: string
+      quantity:
+        type: integer
+      sku:
+        type: string
+      unit_cents:
+        type: integer
+    type: object
+  internal_delivery_http.CreateOrderRequest:
+    properties:
+      currency:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.OrderItem'
+        type: array
+      user_id:
+        type: string
+    type: object
+host: localhost
 info:
   contact: {}
   description: Order management service; order lifecycle is driven by a Temporal saga
@@ -43,7 +65,7 @@ paths:
         name: order
         required: true
         schema:
-          $ref: '#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order'
+          $ref: '#/definitions/internal_delivery_http.CreateOrderRequest'
       produces:
       - application/json
       responses:

@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.Order"
+                            "$ref": "#/definitions/internal_delivery_http.CreateOrderRequest"
                         }
                     }
                 ],
@@ -141,6 +141,40 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "github_com_toainguyen_ecommerce_order-service_internal_model.OrderItem": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "unit_cents": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_delivery_http.CreateOrderRequest": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_toainguyen_ecommerce_order-service_internal_model.OrderItem"
+                    }
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
         }
     }
 }`
@@ -148,7 +182,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8082",
+	Host:             "localhost",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Order Service API",
