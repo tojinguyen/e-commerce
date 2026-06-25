@@ -39,11 +39,11 @@ func (u *ProductUsecase) DeleteProduct(ctx context.Context, id string) error {
 	return u.write.Delete(ctx, id)
 }
 
-func (u *ProductUsecase) Search(ctx context.Context, query string, size int) ([]model.SearchResult, error) {
-	if size <= 0 {
-		size = 10
+func (u *ProductUsecase) Search(ctx context.Context, params model.SearchParams) ([]model.SearchResult, error) {
+	if params.Size <= 0 {
+		params.Size = 10
 	}
-	return u.search.Search(ctx, query, size)
+	return u.search.Search(ctx, params)
 }
 
 func (u *ProductUsecase) Suggest(ctx context.Context, prefix string, size int) ([]string, error) {

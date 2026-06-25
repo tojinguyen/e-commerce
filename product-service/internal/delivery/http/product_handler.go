@@ -123,21 +123,34 @@ func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 // @Description  Full-text search against Elasticsearch; returns matching products with relevance scores
 // @Tags         products
 // @Produce      json
-// @Param        q     query  string  true   "Search query"
-// @Param        size  query  int     false  "Max results to return (default 10)"
+// @Param        q          query  string  false  "Search query (omit for a pure range search)"
+// @Param        min_price  query  int     false  "Minimum price in cents (inclusive)"
+// @Param        max_price  query  int     false  "Maximum price in cents (inclusive)"
+// @Param        size       query  int     false  "Max results to return (default 10)"
 // @Success      200   {object}  map[string]interface{}
 // @Failure      500   {object}  map[string]string
 // @Router       /api/v1/products/search [get]
 func (h *ProductHandler) Search(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
-	results, err := h.uc.Search(r.Context(), q, size)
+	params := model.SearchParams{Query: q, Size: size}
+	if v := r.URL.Query().Get("min_price"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			params.MinPriceCents = &n
+		}
+	}
+	if v := r.URL.Query().Get("max_price"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			params.MaxPriceCents = &n
+		}
+	}
+	results, err := h.uc.Search(r.Context(), params)
 	if err != nil {
 		h.log.Error("search failed", "error", err, "query", q)
 		writeError(w, http.StatusInternalServerError, "search failed")
 		return
 	}
-	h.log.Info("search executed", "query", q, "size", size, "hits", len(results))
+	h.log.Info("search executed", "query", q, "min_price", r.URL.Query().Get("min_price"), "max_price", r.URL.Query().Get("max_price"), "size", size, "hits", len(results))
 	writeJSON(w, http.StatusOK, map[string]any{"query": q, "results": results})
 }
 

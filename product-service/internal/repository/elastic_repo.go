@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -89,21 +90,52 @@ func (r *ElasticRepository) EnsureIndex(ctx context.Context) error {
 	return nil
 }
 
-// Search runs a multi_match full-text query against name and description.
-func (r *ElasticRepository) Search(ctx context.Context, query string, size int) ([]model.SearchResult, error) {
-	body := fmt.Sprintf(`{
-		"size": %d,
-		"query": {
-			"multi_match": {
-				"query": %q,
-				"fields": ["name^3", "description"]
-			}
+// Search runs a fuzzy full-text query against name and description, optionally
+// constrained by a price range. Text matching contributes to relevance scoring
+// (must), while the price bounds are applied as a non-scoring filter.
+func (r *ElasticRepository) Search(ctx context.Context, params model.SearchParams) ([]model.SearchResult, error) {
+	// Text clause: a fuzzy multi_match when a query is given, else match_all so a
+	// pure range search (no q) still returns results.
+	var must map[string]any
+	if strings.TrimSpace(params.Query) != "" {
+		must = map[string]any{
+			"multi_match": map[string]any{
+				"query":     params.Query,
+				"fields":    []string{"name^3", "description"},
+				"fuzziness": "AUTO",
+			},
 		}
-	}`, size, query)
+	} else {
+		must = map[string]any{"match_all": map[string]any{}}
+	}
+
+	bool := map[string]any{"must": must}
+
+	// Range filter on price_cents; gte/lte are added only for the bounds provided.
+	if params.MinPriceCents != nil || params.MaxPriceCents != nil {
+		priceRange := map[string]any{}
+		if params.MinPriceCents != nil {
+			priceRange["gte"] = *params.MinPriceCents
+		}
+		if params.MaxPriceCents != nil {
+			priceRange["lte"] = *params.MaxPriceCents
+		}
+		bool["filter"] = map[string]any{
+			"range": map[string]any{"price_cents": priceRange},
+		}
+	}
+
+	body, err := json.Marshal(map[string]any{
+		"size":  params.Size,
+		"query": map[string]any{"bool": bool},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("encode search query: %w", err)
+	}
 
 	res, err := r.es.Search(
 		r.es.Search.WithIndex(esIndex),
-		r.es.Search.WithBody(strings.NewReader(body)),
+		r.es.Search.WithBody(bytes.NewReader(body)),
 		r.es.Search.WithContext(ctx),
 	)
 	if err != nil {
@@ -130,15 +162,17 @@ func (r *ElasticRepository) Search(ctx context.Context, query string, size int) 
 	results := make([]model.SearchResult, 0, len(raw.Hits.Hits))
 	for _, hit := range raw.Hits.Hits {
 		var src struct {
-			SKU  string `json:"sku"`
-			Name string `json:"name"`
+			SKU        string `json:"sku"`
+			Name       string `json:"name"`
+			PriceCents int64  `json:"price_cents"`
 		}
 		_ = json.Unmarshal(hit.Source, &src)
 		results = append(results, model.SearchResult{
-			ID:    hit.ID,
-			SKU:   src.SKU,
-			Name:  src.Name,
-			Score: hit.Score,
+			ID:         hit.ID,
+			SKU:        src.SKU,
+			Name:       src.Name,
+			PriceCents: src.PriceCents,
+			Score:      hit.Score,
 		})
 	}
 	return results, nil

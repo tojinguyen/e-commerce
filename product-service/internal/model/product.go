@@ -27,8 +27,19 @@ func (Product) TableName() string { return "products" }
 
 // SearchResult is a lightweight projection returned by the Elasticsearch read path.
 type SearchResult struct {
-	ID    string  `json:"id"`
-	SKU   string  `json:"sku"`
-	Name  string  `json:"name"`
-	Score float64 `json:"score"`
+	ID         string  `json:"id"`
+	SKU        string  `json:"sku"`
+	Name       string  `json:"name"`
+	PriceCents int64   `json:"price_cents"`
+	Score      float64 `json:"score"`
+}
+
+// SearchParams carries the optional full-text query and range filters for a
+// product search. Pointer fields distinguish "not provided" from a zero value,
+// so an omitted price bound is left open instead of filtering on 0.
+type SearchParams struct {
+	Query         string
+	MinPriceCents *int64
+	MaxPriceCents *int64
+	Size          int
 }

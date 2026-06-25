@@ -1,0 +1,77 @@
+# Auto-registers the Debezium Postgres source connector so it no longer needs a
+# manual `make register-connector` after deploy. This sits in infra/ (applied by
+# `make deploy`); the Job waits for the Connect REST API, then PUTs the connector
+# config — PUT is an idempotent upsert, so re-applying is safe.
+#
+# The connector config lives in the ConfigMap below (single source of truth).
+# The old infra/debezium/register-postgres-connector.json + `make register-connector`
+# remain as a manual fallback.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: product-connector-config
+  namespace: ecommerce
+data:
+  # Note: this is just the "config" object (no {name, config} wrapper), because
+  # the PUT /connectors/{name}/config endpoint takes the bare config.
+  connector.json: |
+    {
+      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+      "plugin.name": "pgoutput",
+      "publication.name": "ecommerce_cdc",
+      "slot.name": "ecommerce_cdc_slot",
+
+      "database.hostname": "postgres-product",
+      "database.port": "5432",
+      "database.user": "product",
+      "database.password": "product",
+      "database.dbname": "product_db",
+
+      "topic.prefix": "ecommerce",
+      "table.include.list": "public.products",
+
+      "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+      "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+      "key.converter.schemas.enable": "false",
+      "value.converter.schemas.enable": "false",
+
+      "snapshot.mode": "initial",
+      "tombstones.on.delete": "false"
+    }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: register-product-connector
+  namespace: ecommerce
+spec:
+  backoffLimit: 30
+  ttlSecondsAfterFinished: 120
+  template:
+    metadata:
+      labels:
+        app: register-product-connector
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: register
+          image: curlimages/curl:8.10.1
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for kafka-connect REST API..."
+              until curl -sf http://kafka-connect:8083/ >/dev/null; do sleep 3; done
+              echo "registering product-postgres-connector..."
+              curl -sf -X PUT -H "Content-Type: application/json" \
+                http://kafka-connect:8083/connectors/product-postgres-connector/config \
+                -d @/config/connector.json
+              echo "done."
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          configMap:
+            name: product-connector-config

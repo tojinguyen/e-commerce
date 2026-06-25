@@ -22,6 +22,6 @@ type WriteRepository interface {
 // SearchRepository is the read/search port backed by Elasticsearch. It is kept
 // separate from WriteRepository because the two are populated asynchronously via CDC.
 type SearchRepository interface {
-	Search(ctx context.Context, query string, size int) ([]model.SearchResult, error)
+	Search(ctx context.Context, params model.SearchParams) ([]model.SearchResult, error)
 	Suggest(ctx context.Context, prefix string, size int) ([]string, error)
 }
