@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	productclient "github.com/toainguyen/ecommerce/order-service/internal/client/product"
 	"github.com/toainguyen/ecommerce/order-service/internal/config"
 	delivery "github.com/toainguyen/ecommerce/order-service/internal/delivery/http"
 	_ "github.com/toainguyen/ecommerce/order-service/docs"
@@ -59,7 +60,8 @@ func main() {
 	defer tc.Close()
 	log.Info("connected to temporal", "host", cfg.TemporalHostPort, "namespace", cfg.TemporalNamespace)
 
-	uc := usecase.NewOrderUsecase(repo, tc, cfg.TemporalTaskQueue, log)
+	products := productclient.New(cfg.ProductServiceBaseURL)
+	uc := usecase.NewOrderUsecase(repo, tc, cfg.TemporalTaskQueue, products, log)
 	handler := delivery.NewOrderHandler(uc, log)
 	srv := &http.Server{
 		Addr:              ":" + cfg.HTTPPort,

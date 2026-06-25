@@ -15,6 +15,9 @@ var ErrNotFound = errors.New("product not found")
 type WriteRepository interface {
 	Create(ctx context.Context, p *model.Product) error
 	GetByID(ctx context.Context, id string) (*model.Product, error)
+	// GetByIDs returns the products matching the given ids. Missing ids are simply
+	// omitted from the result (no error), so callers must detect absence themselves.
+	GetByIDs(ctx context.Context, ids []string) ([]model.Product, error)
 	Update(ctx context.Context, p *model.Product) error
 	Delete(ctx context.Context, id string) error
 }

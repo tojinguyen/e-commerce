@@ -11,6 +11,8 @@ type Config struct {
 	TemporalNamespace string
 	TemporalTaskQueue string
 
+	ProductServiceBaseURL string
+
 	ServiceName  string
 	OTLPEndpoint string
 	Environment  string
@@ -25,6 +27,8 @@ func Load() Config {
 		TemporalHostPort:  getenv("TEMPORAL_HOST_PORT", "localhost:7233"),
 		TemporalNamespace: getenv("TEMPORAL_NAMESPACE", "default"),
 		TemporalTaskQueue: getenv("TEMPORAL_TASK_QUEUE", "order-task-queue"),
+
+		ProductServiceBaseURL: getenv("PRODUCT_SERVICE_URL", "http://localhost:8080"),
 
 		ServiceName:  getenv("OTEL_SERVICE_NAME", "order-service"),
 		OTLPEndpoint: getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),

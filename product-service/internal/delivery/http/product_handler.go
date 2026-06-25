@@ -88,6 +88,71 @@ func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, updated)
 }
 
+// Get godoc
+// @Summary      Get a product
+// @Description  Returns a single product by id from PostgreSQL (source of truth)
+// @Tags         products
+// @Produce      json
+// @Param        id   path      string  true  "Product ID"
+// @Success      200  {object}  model.Product
+// @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /api/v1/products/{id} [get]
+func (h *ProductHandler) Get(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "missing product id")
+		return
+	}
+	p, err := h.uc.GetProduct(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "product not found")
+			return
+		}
+		h.log.Error("get product failed", "error", err, "id", id)
+		writeError(w, http.StatusInternalServerError, "could not get product")
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
+}
+
+// BatchGetRequest is the payload for fetching multiple products by id.
+type BatchGetRequest struct {
+	IDs []string `json:"ids"`
+}
+
+// BatchGet godoc
+// @Summary      Get products by ids
+// @Description  Returns the products matching the given ids in one call; missing ids are omitted
+// @Tags         products
+// @Accept       json
+// @Produce      json
+// @Param        body  body      BatchGetRequest  true  "Product ids"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Router       /api/v1/products/batch [post]
+func (h *ProductHandler) BatchGet(w http.ResponseWriter, r *http.Request) {
+	var req BatchGetRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if len(req.IDs) == 0 {
+		writeError(w, http.StatusBadRequest, "ids must not be empty")
+		return
+	}
+	products, err := h.uc.GetProducts(r.Context(), req.IDs)
+	if err != nil {
+		h.log.Error("batch get products failed", "error", err, "count", len(req.IDs))
+		writeError(w, http.StatusInternalServerError, "could not get products")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"products": products})
+}
+
 // Delete godoc
 // @Summary      Delete a product
 // @Description  Removes a product from PostgreSQL; the deletion is propagated to Elasticsearch via CDC

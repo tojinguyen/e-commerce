@@ -31,8 +31,10 @@ func NewRouter(h *ProductHandler, log *slog.Logger) http.Handler {
 	// Product API.
 	r.Route("/api/v1/products", func(r chi.Router) {
 		r.Post("/", h.Create)
+		r.Post("/batch", h.BatchGet)
 		r.Get("/search", h.Search)
 		r.Get("/suggest", h.Suggest)
+		r.Get("/{id}", h.Get)
 		r.Put("/{id}", h.Update)
 		r.Delete("/{id}", h.Delete)
 	})

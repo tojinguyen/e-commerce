@@ -44,6 +44,20 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id string) (*model.Pro
 	return &p, nil
 }
 
+// GetByIDs fetches all products whose id is in ids with a single IN query.
+// Missing ids are silently absent from the result; an empty input returns an
+// empty slice without hitting the database.
+func (r *PostgresRepository) GetByIDs(ctx context.Context, ids []string) ([]model.Product, error) {
+	if len(ids) == 0 {
+		return []model.Product{}, nil
+	}
+	var ps []model.Product
+	if err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&ps).Error; err != nil {
+		return nil, err
+	}
+	return ps, nil
+}
+
 // Update applies a full replace of the editable columns for the row with p.ID.
 // It writes a column map (not the struct) so zero values like stock=0 are
 // persisted and immutable columns (id, created_at) are left untouched; gorm

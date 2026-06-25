@@ -33,6 +33,18 @@ func (u *ProductUsecase) UpdateProduct(ctx context.Context, p *model.Product) (*
 	return u.write.GetByID(ctx, p.ID)
 }
 
+// GetProduct returns a single product by id from the source of truth (Postgres).
+// It backs service-to-service price/currency verification (e.g. order-service).
+func (u *ProductUsecase) GetProduct(ctx context.Context, id string) (*model.Product, error) {
+	return u.write.GetByID(ctx, id)
+}
+
+// GetProducts returns the products matching ids in a single batch. It backs
+// order-service price verification for multi-item orders, avoiding N round trips.
+func (u *ProductUsecase) GetProducts(ctx context.Context, ids []string) ([]model.Product, error) {
+	return u.write.GetByIDs(ctx, ids)
+}
+
 // DeleteProduct removes a product from the source of truth. The CDC pipeline
 // propagates the deletion to Elasticsearch.
 func (u *ProductUsecase) DeleteProduct(ctx context.Context, id string) error {

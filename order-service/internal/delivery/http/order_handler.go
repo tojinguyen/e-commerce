@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -56,19 +57,20 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid items")
 		return
 	}
-	// Total is derived server-side from the line items; never trusted from the client.
-	var totalCents int64
-	for _, it := range req.Items {
-		totalCents += it.UnitCents * int64(it.Quantity)
-	}
+	// TotalCents is intentionally left zero here: the usecase verifies each item's
+	// price against the product catalog and derives the total server-side. Client
+	// unit prices are never trusted.
 	o := model.Order{
-		UserID:     req.UserID,
-		Currency:   req.Currency,
-		TotalCents: totalCents,
-		Items:      datatypes.JSON(itemsJSON),
+		UserID:   req.UserID,
+		Currency: req.Currency,
+		Items:    datatypes.JSON(itemsJSON),
 	}
 	created, err := h.uc.CreateOrder(r.Context(), &o)
 	if err != nil {
+		if errors.Is(err, usecase.ErrProductNotFound) || errors.Is(err, usecase.ErrCurrencyMismatch) {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		h.log.Error("create order failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "could not create order")
 		return
