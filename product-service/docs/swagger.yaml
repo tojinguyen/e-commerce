@@ -27,6 +27,11 @@ definitions:
       updated_at:
         type: string
     type: object
+  internal_delivery_http.AdjustStockRequest:
+    properties:
+      delta:
+        type: integer
+    type: object
   internal_delivery_http.BatchGetRequest:
     properties:
       ids:
@@ -190,6 +195,56 @@ paths:
               type: string
             type: object
       summary: Update a product
+      tags:
+      - products
+  /api/v1/products/{id}/stock:
+    patch:
+      consumes:
+      - application/json
+      description: Atomically adds delta to the product stock. Negative delta reserves
+        units; positive releases them. Returns 409 when stock would go below zero.
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Stock delta
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.AdjustStockRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Adjust product stock
       tags:
       - products
   /api/v1/products/batch:

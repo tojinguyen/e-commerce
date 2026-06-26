@@ -11,8 +11,9 @@ RUN cd order-service && go mod download
 COPY pkg/ ./pkg/
 COPY order-service/ ./order-service/
 RUN cd order-service && \
-    CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server && \
-    CGO_ENABLED=0 GOOS=linux go build -o /out/worker ./cmd/worker
+    CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/server ./cmd/server
+RUN cd order-service && \
+    CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/worker ./cmd/worker
 
 # ---- runtime ----
 FROM gcr.io/distroless/static-debian12:nonroot
