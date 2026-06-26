@@ -1,32 +1,35 @@
 /**
  * k6 load test — order-service
  *
- * Flow:
- *   1. setup()   — tạo 1 product thật để lấy product_id + price
- *   2. default() — POST /api/v1/orders liên tục để trigger Temporal saga
- *   3. teardown() — không cần cleanup, orders ở trạng thái CONFIRMED/FAILED trong DB
- *
- * Lưu ý: order-service verify price với product-service nên product-service
- * phải đang chạy. Chạy cả 2 script cùng lúc để thấy cả 2 HPA scale.
+ * Mỗi iteration chọn ngẫu nhiên 1-3 sản phẩm từ PRODUCT_IDS, tạo order với
+ * các items đó. order-service sẽ verify price với product-service rồi kick off
+ * Temporal saga (ReserveInventory → ProcessPayment → CreateShipment → Confirm).
  *
  * Run:
  *   k6 run k6/order-load.js
  *   k6 run --env BASE_URL=http://localhost k6/order-load.js
- *   k6 run --env PRODUCT_ID=<uuid> --env CURRENCY=USD k6/order-load.js
  */
 
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Rate } from 'k6/metrics';
 
-const BASE_URL      = __ENV.BASE_URL  || 'http://localhost';
-const PRODUCT_SVC   = __ENV.PRODUCT_BASE_URL || BASE_URL;
+const BASE_URL = __ENV.BASE_URL || 'http://localhost';
+
+const PRODUCT_IDS = [
+  'ca33fe44-d444-4594-91ff-ce1d10e17a10',
+  'e59f750b-b8ba-4817-907e-5c55fe19a933',
+  '22744ad3-40d9-4759-acbf-41559433e969',
+  '0ea1b51a-ac2f-45e8-b118-51ac79632ec5',
+  '7cc2b119-4e07-4960-b895-b554b4186e9a',
+  'ea53716d-2120-4737-a744-2ae6b0e125b1',
+];
 
 const errorRate = new Rate('errors');
 
 export const options = {
   stages: [
-    { duration: '30s', target: 20  },  // ramp-up nhẹ — order tốn resource hơn product
+    { duration: '30s', target: 20  },  // ramp-up
     { duration: '1m',  target: 100 },  // normal
     { duration: '2m',  target: 300 },  // high load — trigger HPA cho order-service + order-worker
     { duration: '1m',  target: 100 },  // step down
@@ -38,56 +41,25 @@ export const options = {
   },
 };
 
-export function setup() {
-  // Dùng PRODUCT_ID từ env nếu có, không thì tạo mới
-  if (__ENV.PRODUCT_ID) {
-    return { productId: __ENV.PRODUCT_ID, currency: __ENV.CURRENCY || 'USD' };
-  }
-
-  const res = http.post(
-    `${PRODUCT_SVC}/api/v1/products`,
-    JSON.stringify({
-      name: 'k6 Order Test Product',
-      sku: `ORDER-TEST-${Date.now()}`,
-      price_cents: 50000,   // 500 USD
-      currency: 'USD',
-      stock: 99999,         // stock cao để không bị INSUFFICIENT_STOCK
-    }),
-    { headers: { 'Content-Type': 'application/json' } },
-  );
-
-  if (res.status !== 201) {
-    console.error(`setup: failed to create product — ${res.status} ${res.body}`);
-    return { productId: null };
-  }
-
-  const product = JSON.parse(res.body);
-  console.log(`setup: created product ${product.id} (${product.sku})`);
-  return { productId: product.id, currency: product.currency || 'USD' };
+function pickItems() {
+  // Shuffle rồi lấy 1-3 sản phẩm đầu để mỗi order có combo khác nhau
+  const shuffled = PRODUCT_IDS.slice().sort(() => Math.random() - 0.5);
+  const count = Math.floor(Math.random() * 3) + 1;
+  return shuffled.slice(0, count).map((id) => ({
+    product_id: id,
+    sku:        'LOAD-TEST',
+    quantity:   Math.floor(Math.random() * 3) + 1,
+    unit_cents: 0, // server override với giá thật từ product-service
+  }));
 }
 
-export default function (data) {
-  if (!data.productId) {
-    console.warn('no product id — skipping iteration');
-    sleep(1);
-    return;
-  }
-
-  const quantity = Math.floor(Math.random() * 3) + 1; // 1–3 items
-
+export default function () {
   const res = http.post(
     `${BASE_URL}/api/v1/orders`,
     JSON.stringify({
-      user_id:  `user-${__VU}`,         // VU = virtual user, unique per concurrent user
-      currency: data.currency,
-      items: [
-        {
-          product_id: data.productId,
-          sku:        'ORDER-TEST',
-          quantity:   quantity,
-          unit_cents: 0,                 // server sẽ override với giá thật
-        },
-      ],
+      user_id:  `user-${__VU}`,
+      currency: 'USD',
+      items:    pickItems(),
     }),
     { headers: { 'Content-Type': 'application/json' } },
   );
@@ -101,10 +73,10 @@ export default function (data) {
 
   if (!ok) {
     errorRate.add(1);
-    if (res.status !== 409) { // 409 = insufficient stock, expected
+    if (res.status !== 409) { // 409 = insufficient stock, expected under load
       console.error(`order failed: ${res.status} — ${res.body}`);
     }
   }
 
-  sleep(Math.random() * 1 + 0.5); // 0.5–1.5s think time (order nặng hơn)
+  sleep(Math.random() * 1 + 0.5); // 0.5–1.5s think time
 }
