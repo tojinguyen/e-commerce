@@ -11,6 +11,10 @@ import (
 // It lets upper layers map a missing record to HTTP 404 without importing gorm.
 var ErrNotFound = errors.New("product not found")
 
+// ErrInsufficientStock is returned by AdjustStock when a negative delta would
+// drive stock below zero. The caller should treat this as a non-retriable error.
+var ErrInsufficientStock = errors.New("insufficient stock")
+
 // WriteRepository is the persistence port for the catalog source of truth (Postgres).
 type WriteRepository interface {
 	Create(ctx context.Context, p *model.Product) error
@@ -20,6 +24,10 @@ type WriteRepository interface {
 	GetByIDs(ctx context.Context, ids []string) ([]model.Product, error)
 	Update(ctx context.Context, p *model.Product) error
 	Delete(ctx context.Context, id string) error
+	// AdjustStock atomically adds delta to the product's stock. Use a negative
+	// delta to reserve units and a positive delta to release them. Returns
+	// ErrInsufficientStock when stock + delta would go below zero.
+	AdjustStock(ctx context.Context, id string, delta int) error
 }
 
 // SearchRepository is the read/search port backed by Elasticsearch. It is kept

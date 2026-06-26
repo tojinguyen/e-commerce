@@ -83,6 +83,28 @@ func (r *PostgresRepository) Update(ctx context.Context, p *model.Product) error
 	return nil
 }
 
+// AdjustStock atomically applies delta to the product's stock using a single
+// UPDATE with a guard clause (stock + delta >= 0). If RowsAffected == 0 the
+// row either does not exist or has insufficient stock — a second COUNT
+// distinguishes the two cases so the caller gets the right sentinel error.
+func (r *PostgresRepository) AdjustStock(ctx context.Context, id string, delta int) error {
+	res := r.db.WithContext(ctx).Model(&model.Product{}).
+		Where("id = ? AND stock + ? >= 0", id, delta).
+		Update("stock", gorm.Expr("stock + ?", delta))
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		var count int64
+		r.db.WithContext(ctx).Model(&model.Product{}).Where("id = ?", id).Count(&count)
+		if count == 0 {
+			return ErrNotFound
+		}
+		return ErrInsufficientStock
+	}
+	return nil
+}
+
 // Delete removes the row by id, returning ErrNotFound when nothing matched.
 // Elasticsearch is reconciled via CDC, so no ES delete is issued here.
 func (r *PostgresRepository) Delete(ctx context.Context, id string) error {

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/toainguyen/ecommerce/order-service/internal/config"
+	productclient "github.com/toainguyen/ecommerce/order-service/internal/client/product"
 	"github.com/toainguyen/ecommerce/order-service/internal/repository"
 	wf "github.com/toainguyen/ecommerce/order-service/internal/workflow"
 	"github.com/toainguyen/ecommerce/pkg/observability"
@@ -56,9 +57,15 @@ func main() {
 	defer tc.Close()
 	log.Info("connected to temporal", "host", cfg.TemporalHostPort)
 
+	products := productclient.New(cfg.ProductServiceBaseURL)
+
 	w := worker.New(tc, cfg.TemporalTaskQueue, worker.Options{})
 	w.RegisterWorkflow(wf.OrderWorkflow)
-	w.RegisterActivity(&wf.Activities{Repo: repo})
+	w.RegisterActivity(&wf.Activities{
+		Repo:     repo,
+		Products: products,
+		Log:      log,
+	})
 
 	if err := w.Run(worker.InterruptCh()); err != nil {
 		log.Error("worker stopped", "error", err)

@@ -37,6 +37,7 @@ func NewRouter(h *ProductHandler, log *slog.Logger) http.Handler {
 		r.Get("/{id}", h.Get)
 		r.Put("/{id}", h.Update)
 		r.Delete("/{id}", h.Delete)
+		r.Patch("/{id}/stock", h.AdjustStock)
 	})
 
 	return r

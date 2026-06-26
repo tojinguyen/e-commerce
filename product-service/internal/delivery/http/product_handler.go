@@ -183,6 +183,57 @@ func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// AdjustStockRequest is the payload for atomically changing a product's stock.
+type AdjustStockRequest struct {
+	Delta int `json:"delta"`
+}
+
+// AdjustStock godoc
+// @Summary      Adjust product stock
+// @Description  Atomically adds delta to the product stock. Negative delta reserves units; positive releases them. Returns 409 when stock would go below zero.
+// @Tags         products
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string             true  "Product ID"
+// @Param        body  body      AdjustStockRequest true  "Stock delta"
+// @Success      204   "No Content"
+// @Failure      400   {object}  map[string]string
+// @Failure      404   {object}  map[string]string
+// @Failure      409   {object}  map[string]string
+// @Failure      500   {object}  map[string]string
+// @Router       /api/v1/products/{id}/stock [patch]
+func (h *ProductHandler) AdjustStock(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "missing product id")
+		return
+	}
+	var req AdjustStockRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Delta == 0 {
+		writeError(w, http.StatusBadRequest, "delta must not be zero")
+		return
+	}
+	if err := h.uc.AdjustStock(r.Context(), id, req.Delta); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			writeError(w, http.StatusNotFound, "product not found")
+			return
+		}
+		if errors.Is(err, repository.ErrInsufficientStock) {
+			writeError(w, http.StatusConflict, "insufficient stock")
+			return
+		}
+		h.log.Error("adjust stock failed", "error", err, "id", id, "delta", req.Delta)
+		writeError(w, http.StatusInternalServerError, "could not adjust stock")
+		return
+	}
+	h.log.Info("stock adjusted", "id", id, "delta", req.Delta)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // Search godoc
 // @Summary      Search products
 // @Description  Full-text search against Elasticsearch; returns matching products with relevance scores

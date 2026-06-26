@@ -51,6 +51,12 @@ func (u *ProductUsecase) DeleteProduct(ctx context.Context, id string) error {
 	return u.write.Delete(ctx, id)
 }
 
+// AdjustStock delegates atomic stock mutation to the repository.
+// A negative delta reserves units; a positive delta releases them.
+func (u *ProductUsecase) AdjustStock(ctx context.Context, id string, delta int) error {
+	return u.write.AdjustStock(ctx, id, delta)
+}
+
 func (u *ProductUsecase) Search(ctx context.Context, params model.SearchParams) ([]model.SearchResult, error) {
 	if params.Size <= 0 {
 		params.Size = 10

@@ -7,12 +7,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
+
+// ErrInsufficientStock is returned by AdjustStock when the product-service
+// rejects the delta because stock would go below zero.
+var ErrInsufficientStock = errors.New("insufficient stock")
+
+// ErrProductNotFound is returned by AdjustStock when the product does not exist.
+var ErrProductNotFound = errors.New("product not found")
 
 // Product is the subset of the catalog product needed for price verification.
 type Product struct {
@@ -79,4 +87,39 @@ func (c *Client) GetProducts(ctx context.Context, ids []string) (map[string]*Pro
 		m[out.Products[i].ID] = &out.Products[i]
 	}
 	return m, nil
+}
+
+// AdjustStock sends a signed delta to the product-service stock endpoint.
+// Use a negative delta to reserve units (inventory decrease on order) and a
+// positive delta to release them (compensation on order failure).
+func (c *Client) AdjustStock(ctx context.Context, productID string, delta int) error {
+	body, err := json.Marshal(map[string]int{"delta": delta})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch,
+		c.baseURL+"/api/v1/products/"+productID+"/stock",
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		return nil
+	case http.StatusNotFound:
+		return ErrProductNotFound
+	case http.StatusConflict:
+		return ErrInsufficientStock
+	default:
+		return fmt.Errorf("product-service returned status %d", resp.StatusCode)
+	}
 }
