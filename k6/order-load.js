@@ -48,7 +48,7 @@ function pickItems() {
   return shuffled.slice(0, count).map((id) => ({
     product_id: id,
     sku:        'LOAD-TEST',
-    quantity:   Math.floor(Math.random() * 3) + 1,
+    quantity:   1,
     unit_cents: 0, // server override với giá thật từ product-service
   }));
 }
