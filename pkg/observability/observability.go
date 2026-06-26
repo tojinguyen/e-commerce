@@ -16,9 +16,26 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
-// NewLogger returns a JSON slog logger so Promtail/Loki can parse fields cleanly.
+// traceHandler wraps a slog.Handler and injects trace_id + span_id from the
+// OTel span stored in the context. Callers must use InfoContext/ErrorContext etc.
+// for the fields to appear; plain Info/Error have no context and are a no-op.
+type traceHandler struct{ slog.Handler }
+
+func (h traceHandler) Handle(ctx context.Context, r slog.Record) error {
+	if sc := trace.SpanFromContext(ctx).SpanContext(); sc.IsValid() {
+		r.AddAttrs(
+			slog.String("trace_id", sc.TraceID().String()),
+			slog.String("span_id", sc.SpanID().String()),
+		)
+	}
+	return h.Handler.Handle(ctx, r)
+}
+
+// NewLogger returns a JSON slog logger that automatically injects trace_id and
+// span_id when a context carrying an active OTel span is passed to log calls.
 func NewLogger(level string) *slog.Logger {
 	var lvl slog.Level
 	switch strings.ToLower(level) {
@@ -31,7 +48,8 @@ func NewLogger(level string) *slog.Logger {
 	default:
 		lvl = slog.LevelInfo
 	}
-	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: lvl}))
+	base := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: lvl})
+	return slog.New(traceHandler{base})
 }
 
 // InitTracing configures a global OTLP/HTTP trace exporter and returns a shutdown
@@ -47,7 +65,7 @@ func InitTracing(ctx context.Context, serviceName, endpoint, environment string)
 	}
 
 	res, err := resource.Merge(resource.Default(), resource.NewWithAttributes(
-		semconv.SchemaURL,
+		"",
 		semconv.ServiceName(serviceName),
 		semconv.DeploymentEnvironmentName(environment),
 	))

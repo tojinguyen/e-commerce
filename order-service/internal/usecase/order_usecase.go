@@ -98,10 +98,10 @@ func (u *OrderUsecase) CreateOrder(ctx context.Context, o *model.Order) (*model.
 	}); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "create order transaction failed")
-		u.log.Error("create order failed", "order_id", o.ID, "error", err)
+		u.log.ErrorContext(ctx, "create order failed", "order_id", o.ID, "error", err)
 		return nil, err
 	}
-	u.log.Info("started order workflow", "order_id", o.ID, "workflow_id", we.GetID(), "run_id", we.GetRunID())
+	u.log.InfoContext(ctx, "started order workflow", "order_id", o.ID, "workflow_id", we.GetID(), "run_id", we.GetRunID())
 	return o, nil
 }
 

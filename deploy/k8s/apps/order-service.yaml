@@ -6,6 +6,7 @@ metadata:
 data:
   ORDER_HTTP_PORT: "8082"
   ORDER_PG_DSN: "host=postgres-order port=5432 user=order password=order dbname=order_db sslmode=disable"
+  PRODUCT_SERVICE_URL: "http://product-service:8080"
   TEMPORAL_HOST_PORT: "temporal:7233"
   TEMPORAL_NAMESPACE: "default"
   TEMPORAL_TASK_QUEUE: "order-task-queue"

@@ -71,7 +71,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		h.log.Error("create order failed", "error", err)
+		h.log.ErrorContext(r.Context(), "create order failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "could not create order")
 		return
 	}

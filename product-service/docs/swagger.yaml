@@ -27,6 +27,13 @@ definitions:
       updated_at:
         type: string
     type: object
+  internal_delivery_http.BatchGetRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        type: array
+    type: object
 info:
   contact: {}
   description: Product catalog service with Elasticsearch-backed search and autocomplete.
@@ -104,6 +111,42 @@ paths:
       summary: Delete a product
       tags:
       - products
+    get:
+      description: Returns a single product by id from PostgreSQL (source of truth)
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_toainguyen_ecommerce_product-service_internal_model.Product'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a product
+      tags:
+      - products
     put:
       consumes:
       - application/json
@@ -147,6 +190,42 @@ paths:
               type: string
             type: object
       summary: Update a product
+      tags:
+      - products
+  /api/v1/products/batch:
+    post:
+      consumes:
+      - application/json
+      description: Returns the products matching the given ids in one call; missing
+        ids are omitted
+      parameters:
+      - description: Product ids
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.BatchGetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get products by ids
       tags:
       - products
   /api/v1/products/search:

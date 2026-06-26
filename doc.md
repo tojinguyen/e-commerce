@@ -55,14 +55,16 @@ Accessible via NGINX Ingress — no port-forward needed:
 | Tool | URL | Notes |
 |------|-----|-------|
 | Grafana | http://localhost/grafana | Login: `admin` / `admin` |
-| Jaeger | http://localhost/jaeger | |
-| Temporal UI | http://temporal.localhost | See note below |
+| Jaeger | http://localhost/jaeger | Distributed traces |
+| Temporal UI | http://temporal.localhost | Workflow event history |
 
 > **Temporal UI:** `temporal.localhost` resolves to `127.0.0.1` in most modern browsers automatically.
 > If it doesn't load, add this line to `C:\Windows\System32\drivers\etc\hosts`:
 > ```
 > 127.0.0.1 temporal.localhost
 > ```
+
+> **Jaeger — search by service:** Select `order-service`, `product-service`, or `cart-service` from the Service dropdown. Spans batch for up to 5 s before appearing.
 
 ---
 

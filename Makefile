@@ -96,17 +96,21 @@ deploy: swag images kind-load ## regenerate swagger, build images, load into kin
 	$(MAKE) pf
 
 .PHONY: pf
-pf: ## background port-forward all DBs + search for DBeaver/Kibana (product:5433, order:5434, mongo:27017, es:9200, kibana:5601)
+pf: ## background port-forward all DBs + search + Jaeger (OTLP+UI) + Temporal UI
 	kubectl -n ecommerce wait --for=condition=ready pod -l app=postgres-product --timeout=180s
 	kubectl -n ecommerce wait --for=condition=ready pod -l app=postgres-order --timeout=180s
 	kubectl -n ecommerce wait --for=condition=ready pod -l app=mongodb --timeout=180s
 	kubectl -n ecommerce wait --for=condition=ready pod -l app=elasticsearch --timeout=180s
 	kubectl -n ecommerce wait --for=condition=ready pod -l app=kibana --timeout=180s
+	kubectl -n observability wait --for=condition=ready pod -l app=jaeger --timeout=180s
+	kubectl -n ecommerce wait --for=condition=ready pod -l app=temporal-ui --timeout=180s
 	cmd /c start "" /min kubectl -n ecommerce port-forward svc/postgres-product 5433:5432
 	cmd /c start "" /min kubectl -n ecommerce port-forward svc/postgres-order 5434:5432
 	cmd /c start "" /min kubectl -n ecommerce port-forward svc/mongodb 27017:27017
 	cmd /c start "" /min kubectl -n ecommerce port-forward svc/elasticsearch 9200:9200
 	cmd /c start "" /min kubectl -n ecommerce port-forward svc/kibana 5601:5601
+	cmd /c start "" /min kubectl -n observability port-forward svc/jaeger 16686:16686 4318:4318
+	cmd /c start "" /min kubectl -n ecommerce port-forward svc/temporal-ui 8088:8080
 
 .PHONY: restart
 restart: ## force pods to pick up freshly side-loaded :$(TAG) images (same-tag rebuilds don't change the manifest, so apply alone won't roll)
@@ -155,8 +159,8 @@ pf-grafana: ## Grafana -> http://localhost:3000
 	kubectl -n observability port-forward svc/grafana 3000:3000
 
 .PHONY: pf-jaeger
-pf-jaeger: ## Jaeger UI -> http://localhost:16686
-	kubectl -n observability port-forward svc/jaeger 16686:16686
+pf-jaeger: ## Jaeger UI + OTLP receiver -> http://localhost:16686 (traces: localhost:4318)
+	kubectl -n observability port-forward svc/jaeger 16686:16686 4318:4318
 
 .PHONY: pf-temporal
 pf-temporal: ## Temporal UI -> http://localhost:8088
@@ -181,7 +185,7 @@ help: ## show available targets
 	@echo   validate            client-side dry-run of all manifests
 	@echo   swag                regenerate swagger docs for every service
 	@echo   register-connector  register the Debezium Postgres CDC source
-	@echo   pf                  background port-forward all DBs + ES + Kibana (5433/5434/27017/9200/5601)
+	@echo   pf                  background port-forward all DBs + ES + Kibana + Jaeger + Temporal UI
 	@echo   pf-ingress          port-forward ingress  (localhost:80) — temp workaround
 	@echo   pf-product          port-forward product-service swagger (localhost:8080)
 	@echo   pf-es               port-forward Elasticsearch (localhost:9200)
