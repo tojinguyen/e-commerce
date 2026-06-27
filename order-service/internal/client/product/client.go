@@ -9,9 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/sony/gobreaker"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
@@ -22,6 +24,10 @@ var ErrInsufficientStock = errors.New("insufficient stock")
 // ErrProductNotFound is returned by AdjustStock when the product does not exist.
 var ErrProductNotFound = errors.New("product not found")
 
+// ErrCircuitOpen is returned when the circuit breaker is open, meaning the
+// product-service is considered unavailable after repeated failures.
+var ErrCircuitOpen = errors.New("product-service circuit open")
+
 // Product is the subset of the catalog product needed for price verification.
 type Product struct {
 	ID         string `json:"id"`
@@ -31,10 +37,15 @@ type Product struct {
 	Stock      int    `json:"stock"`
 }
 
-// Client talks to the product-service over HTTP.
+// Client talks to the product-service over HTTP with a per-operation circuit
+// breaker. Two breakers are used — one for reads (GetProducts) and one for
+// writes (AdjustStock) — so that stock mutations and pricing reads fail
+// independently.
 type Client struct {
 	baseURL string
 	http    *http.Client
+	cbRead  *gobreaker.CircuitBreaker
+	cbWrite *gobreaker.CircuitBreaker
 }
 
 // New builds a Client for the given product-service base URL (e.g. http://localhost:8080).
@@ -47,13 +58,67 @@ func New(baseURL string) *Client {
 			Timeout:   5 * time.Second,
 			Transport: otelhttp.NewTransport(http.DefaultTransport),
 		},
+		cbRead:  newBreaker("product-read"),
+		cbWrite: newBreaker("product-write"),
 	}
+}
+
+// newBreaker creates a circuit breaker that:
+//   - opens after 5 consecutive infrastructure failures (network errors, 5xx)
+//   - stays open for 30 s before moving to half-open
+//   - tests recovery with up to 3 probe requests in half-open
+//   - does NOT count business errors (ErrProductNotFound, ErrInsufficientStock)
+//     as failures, because those reflect valid product-service responses
+func newBreaker(name string) *gobreaker.CircuitBreaker {
+	return gobreaker.NewCircuitBreaker(gobreaker.Settings{
+		Name:        name,
+		MaxRequests: 3,
+		Interval:    60 * time.Second,
+		Timeout:     30 * time.Second,
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			return counts.ConsecutiveFailures >= 5
+		},
+		IsSuccessful: func(err error) bool {
+			// Business-level errors are valid product-service responses —
+			// they must not influence the breaker's failure counter.
+			if errors.Is(err, ErrProductNotFound) || errors.Is(err, ErrInsufficientStock) {
+				return true
+			}
+			return err == nil
+		},
+		OnStateChange: func(name string, from, to gobreaker.State) {
+			slog.Warn("circuit breaker state changed",
+				"breaker", name,
+				"from", from.String(),
+				"to", to.String(),
+			)
+		},
+	})
+}
+
+// wrapCBErr converts gobreaker sentinel errors to ErrCircuitOpen so callers
+// only need to check a single error value.
+func wrapCBErr(err error) error {
+	if errors.Is(err, gobreaker.ErrOpenState) || errors.Is(err, gobreaker.ErrTooManyRequests) {
+		return fmt.Errorf("%w: %v", ErrCircuitOpen, err)
+	}
+	return err
 }
 
 // GetProducts fetches the given product ids in a single batch request and returns
 // them keyed by id. Ids that do not exist are simply absent from the map, so the
 // caller is responsible for detecting missing products.
 func (c *Client) GetProducts(ctx context.Context, ids []string) (map[string]*Product, error) {
+	result, err := c.cbRead.Execute(func() (any, error) {
+		return c.doGetProducts(ctx, ids)
+	})
+	if err != nil {
+		return nil, wrapCBErr(err)
+	}
+	return result.(map[string]*Product), nil
+}
+
+func (c *Client) doGetProducts(ctx context.Context, ids []string) (map[string]*Product, error) {
 	body, err := json.Marshal(map[string][]string{"ids": ids})
 	if err != nil {
 		return nil, err
@@ -93,6 +158,13 @@ func (c *Client) GetProducts(ctx context.Context, ids []string) (map[string]*Pro
 // Use a negative delta to reserve units (inventory decrease on order) and a
 // positive delta to release them (compensation on order failure).
 func (c *Client) AdjustStock(ctx context.Context, productID string, delta int) error {
+	_, err := c.cbWrite.Execute(func() (any, error) {
+		return nil, c.doAdjustStock(ctx, productID, delta)
+	})
+	return wrapCBErr(err)
+}
+
+func (c *Client) doAdjustStock(ctx context.Context, productID string, delta int) error {
 	body, err := json.Marshal(map[string]int{"delta": delta})
 	if err != nil {
 		return err

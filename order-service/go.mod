@@ -9,6 +9,7 @@ require (
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/prometheus/client_golang v1.20.5
 	github.com/riandyrn/otelchi v0.12.3
+	github.com/sony/gobreaker v1.0.0
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.6
 	github.com/toainguyen/ecommerce/pkg v0.0.0
